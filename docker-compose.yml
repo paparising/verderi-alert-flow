@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-password}
+      POSTGRES_DB: ${DB_NAME:-vederi}
+    ports:
+      - "${DB_PORT:-5438}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./packages/backend/.env
+    environment:
+      DB_HOST: db
+    ports:
+      - "${PORT:-3001}:3000"
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://backend:3000
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

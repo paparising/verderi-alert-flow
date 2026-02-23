@@ -1,0 +1,13 @@
+{
+  "name": "vederi-alert-flow",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "start": "npm run start --workspaces",
+    "bootstrap": "npm install"
+  }
+}
