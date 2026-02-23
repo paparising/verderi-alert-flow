@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert } from './entities/alert.entity';
@@ -6,6 +6,7 @@ import { AlertEvent } from './entities/alert-event.entity';
 import { CreateAlertDto } from './dto/create-alert.dto';
 import { CreateAlertEventDto } from './dto/create-alert-event.dto';
 import { AlertStatus } from './enums/alert-status.enum';
+import { AlertGateway } from './alert.gateway';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class AlertService {
     private alertRepo: Repository<Alert>,
     @InjectRepository(AlertEvent)
     private alertEventRepo: Repository<AlertEvent>,
+    @Inject(forwardRef(() => AlertGateway))
+    private alertGateway: AlertGateway,
   ) {}
 
   async createAlert(dto: CreateAlertDto) {
@@ -25,7 +28,12 @@ export class AlertService {
       status: dto.status || AlertStatus.NEW,
       createdBy: dto.createdBy,
     });
-    return this.alertRepo.save(alert);
+    const savedAlert = await this.alertRepo.save(alert);
+    
+    // Emit WebSocket event for new alert
+    this.alertGateway.emitNewAlert(dto.orgId, savedAlert);
+    
+    return savedAlert;
   }
 
   async getAlertsByOrg(orgId: string, status?: string) {
@@ -50,10 +58,10 @@ export class AlertService {
     const previousStatus = alert.status;
     alert.status = status;
     alert.updatedBy = updatedBy;
-    await this.alertRepo.save(alert);
+    const updatedAlert = await this.alertRepo.save(alert);
 
     // Create audit event
-    await this.createAlertEvent({
+    const event = await this.createAlertEvent({
       orgId,
       eventData: {
         alertId: alert.id,
@@ -64,7 +72,11 @@ export class AlertService {
       createdBy: updatedBy,
     });
 
-    return alert;
+    // Emit WebSocket events
+    this.alertGateway.emitAlertStatusUpdate(orgId, updatedAlert);
+    this.alertGateway.emitAlertEvent(orgId, event);
+
+    return updatedAlert;
   }
 
   async createAlertEvent(dto: CreateAlertEventDto) {

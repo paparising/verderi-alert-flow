@@ -1,4 +1,5 @@
 import React, { useState, FormEvent } from 'react';
+import { AlertsList } from './components/AlertsList';
 import './App.css';
 
 interface UserForm {
@@ -11,6 +12,7 @@ interface UserForm {
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'alerts' | 'settings'>('dashboard');
   const [form, setForm] = useState<UserForm>({
     name: '',
     address: '',
@@ -19,6 +21,9 @@ function App() {
     organizationId: '',
   });
   const [message, setMessage] = useState<string | null>(null);
+
+  // For demo purposes - in production, this would come from auth context
+  const currentOrgId = 'replace-with-actual-org-id';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -61,17 +66,23 @@ function App() {
       {/* Navigation Tabs */}
       <nav className="app-nav">
         <div className="nav-tabs">
-          <button className="tab active">
-            <span className="icon">📋</span> Dashboard (0)
+          <button 
+            className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <span className="icon">📋</span> Dashboard
           </button>
-          <button className="tab">
-            <span className="icon">⚙️</span> Settings (0)
+          <button 
+            className={`tab ${activeTab === 'alerts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('alerts')}
+          >
+            <span className="icon">🔔</span> Live Alerts
           </button>
-          <button className="tab">
-            <span className="icon">📊</span> Summary
-          </button>
-          <button className="tab">
-            <span className="icon">📈</span> Report
+          <button 
+            className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <span className="icon">⚙️</span> Settings
           </button>
         </div>
       </nav>
@@ -79,22 +90,38 @@ function App() {
       {/* Main Content */}
       <main className="app-main">
         <div className="content-container">
-          <div className="welcome-section">
-            <div className="icon-large">👥</div>
-            <h2>Admin Control Panel</h2>
-            <p>Manage users and organizations</p>
-          </div>
+          {activeTab === 'dashboard' && (
+            <>
+              <div className="welcome-section">
+                <div className="icon-large">👥</div>
+                <h2>Admin Control Panel</h2>
+                <p>Manage users and organizations</p>
+              </div>
 
-          <div className="action-buttons">
-            <button className="btn-action" onClick={() => setShowUserModal(true)}>
-              <span className="btn-icon">➕</span>
-              Create User
-            </button>
-            <button className="btn-action">
-              <span className="btn-icon">🏢</span>
-              Create Organization
-            </button>
-          </div>
+              <div className="action-buttons">
+                <button className="btn-action" onClick={() => setShowUserModal(true)}>
+                  <span className="btn-icon">➕</span>
+                  Create User
+                </button>
+                <button className="btn-action">
+                  <span className="btn-icon">🏢</span>
+                  Create Organization
+                </button>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'alerts' && (
+            <AlertsList orgId={currentOrgId} />
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="welcome-section">
+              <div className="icon-large">⚙️</div>
+              <h2>Settings</h2>
+              <p>Configure your alert system</p>
+            </div>
+          )}
         </div>
       </main>
 
