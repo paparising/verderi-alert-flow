@@ -19,6 +19,7 @@ describe('AlertService', () => {
     alertId: 'alert-uuid',
     alertContext: 'Test alert',
     status: AlertStatus.NEW,
+    version: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -110,6 +111,41 @@ describe('AlertService', () => {
       await service.getAlertsByOrg('org-123', AlertStatus.NEW);
 
       expect(queryBuilder.andWhere).toHaveBeenCalledWith('alert.status = :status', { status: AlertStatus.NEW });
+    });
+  });
+
+  describe('updateAlertStatus', () => {
+    it('should update alert status and emit websocket event', async () => {
+      const updatedAlert = { ...mockAlert, status: AlertStatus.ACKNOWLEDGED, version: 2 };
+      alertRepo.findOne.mockResolvedValue(mockAlert as Alert);
+      alertRepo.save.mockResolvedValue(updatedAlert as Alert);
+      kafkaProducer.sendAlertEvent.mockResolvedValue(undefined);
+
+      const result = await service.updateAlertStatus('alert-123', 'org-123', AlertStatus.ACKNOWLEDGED, 'user-456');
+
+      expect(alertRepo.findOne).toHaveBeenCalledWith({ where: { id: 'alert-123', orgId: 'org-123' } });
+      expect(alertRepo.save).toHaveBeenCalled();
+      expect(alertGateway.emitAlertStatusUpdate).toHaveBeenCalledWith('org-123', updatedAlert);
+      expect(result.status).toBe(AlertStatus.ACKNOWLEDGED);
+    });
+
+    it('should throw error when alert not found', async () => {
+      alertRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.updateAlertStatus('non-existent', 'org-123', AlertStatus.ACKNOWLEDGED, 'user-456'))
+        .rejects.toThrow('Alert not found');
+    });
+
+    it('should increment version on update for optimistic locking', async () => {
+      const alertWithVersion = { ...mockAlert, version: 1 };
+      const updatedAlertWithVersion = { ...mockAlert, status: AlertStatus.RESOLVED, version: 2 };
+      alertRepo.findOne.mockResolvedValue(alertWithVersion as Alert);
+      alertRepo.save.mockResolvedValue(updatedAlertWithVersion as Alert);
+      kafkaProducer.sendAlertEvent.mockResolvedValue(undefined);
+
+      const result = await service.updateAlertStatus('alert-123', 'org-123', AlertStatus.RESOLVED, 'user-789');
+
+      expect(result.version).toBe(2);
     });
   });
 });

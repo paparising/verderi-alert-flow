@@ -34,10 +34,19 @@
     "start": "npm run docker:up",
     "bootstrap": "npm install"
   },
-  "keywords": ["microservices", "nestjs", "kafka", "websockets", "react"],
+  "keywords": [
+    "microservices",
+    "nestjs",
+    "kafka",
+    "websockets",
+    "react"
+  ],
   "author": "Vederi Team",
   "license": "UNLICENSED",
   "devDependencies": {
     "prettier": "^3.4.2"
+  },
+  "dependencies": {
+    "glob": "^13.0.6"
   }
 }

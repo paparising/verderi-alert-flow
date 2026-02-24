@@ -3,7 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AlertEvent, Organization, User, Alert } from '@vederi/shared';
+import { AlertEvent, Organization, User, Alert, ProcessedEvent } from '@vederi/shared';
 import { EventPersistenceService } from './persistence.service';
 
 @Module({
@@ -19,10 +19,10 @@ import { EventPersistenceService } from './persistence.service';
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASS || 'password',
       database: process.env.DB_NAME || 'vederi',
-      entities: [Organization, User, Alert, AlertEvent],
+      entities: [Organization, User, Alert, AlertEvent, ProcessedEvent],
       synchronize: true,
     }),
-    TypeOrmModule.forFeature([AlertEvent]),
+    TypeOrmModule.forFeature([AlertEvent, ProcessedEvent]),
   ],
   providers: [EventPersistenceService],
 })

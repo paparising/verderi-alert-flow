@@ -5,13 +5,16 @@ import {
   ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  VersionColumn,
   Index,
+  Unique,
 } from 'typeorm';
 import { Organization } from './organization.entity';
 import { User } from './user.entity';
 import { AlertStatus } from '../enums/alert-status.enum';
 
 @Entity()
+@Unique(['alertId'])
 @Index(['orgId'])
 @Index(['orgId', 'status'])
 @Index(['orgId', 'createdAt'])
@@ -24,6 +27,9 @@ export class Alert {
 
   @Column('uuid')
   alertId: string;
+
+  @VersionColumn()
+  version: number;
 
   @Column('text')
   alertContext: string;
