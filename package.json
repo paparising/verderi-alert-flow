@@ -1,13 +1,37 @@
 {
   "name": "vederi-alert-flow",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Vederi Alert Flow Microservices",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "start": "npm run start --workspaces",
+    "install:all": "npm install && npm run install:packages",
+    "install:packages": "npm install --workspace=@vederi/shared && npm install --workspace=@vederi/backend-api && npm install --workspace=@vederi/backend-persistence && npm install --workspace=@vederi/backend-notification",
+    "build:shared": "npm run build --workspace=@vederi/shared",
+    "build:api:only": "npm run build --workspace=@vederi/backend-api",
+    "build:persistence:only": "npm run build --workspace=@vederi/backend-persistence",
+    "build:notification:only": "npm run build --workspace=@vederi/backend-notification",
+    "build:api": "npm run build:shared && npm run build:api:only",
+    "build:persistence": "npm run build:shared && npm run build:persistence:only",
+    "build:notification": "npm run build:shared && npm run build:notification:only",
+    "build:all": "npm run build:shared && npm run build:api:only && npm run build:persistence:only && npm run build:notification:only",
+    "build": "npm run build:all",
+    "docker:build": "npm run build:all && docker compose --env-file .env.dev build",
+    "docker:up": "docker compose --env-file .env.dev up --build -d",
+    "docker:down": "docker compose --env-file .env.dev down",
+    "docker:logs": "docker compose logs -f",
+    "docker:logs:api": "docker compose logs -f backend-api",
+    "docker:logs:persistence": "docker compose logs -f backend-persistence",
+    "docker:logs:notification": "docker compose logs -f backend-notification",
+    "start": "npm run docker:up",
     "bootstrap": "npm install"
+  },
+  "keywords": ["microservices", "nestjs", "kafka", "websockets", "react"],
+  "author": "Vederi Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "prettier": "^3.4.2"
   }
 }

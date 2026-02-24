@@ -1,0 +1,19 @@
+{
+  "name": "@vederi/shared",
+  "version": "1.0.0",
+  "description": "Shared entities, DTOs, and enums for Vederi Alert Flow",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "class-validator": "^0.14.0",
+    "typeorm": "^0.3.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.3"
+  }
+}

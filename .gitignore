@@ -2,5 +2,13 @@
 .env
 .env.local
 .env.*.local
+
+# Dependencies
 node_modules
-node_modules
+
+# Deprecated old backend (DO NOT COMMIT)
+packages/backend-DEPRECATED-OLD/
+
+# Backup files
+*.zip
+backend-old-backup.zip
