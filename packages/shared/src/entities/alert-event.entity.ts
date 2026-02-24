@@ -11,6 +11,8 @@ import { User } from './user.entity';
 
 @Entity()
 @Index(['orgId'])
+@Index(['eventId'])
+@Index(['orgId', 'createdAt'])
 export class AlertEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;

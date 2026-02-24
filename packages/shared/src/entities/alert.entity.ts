@@ -13,6 +13,8 @@ import { AlertStatus } from '../enums/alert-status.enum';
 
 @Entity()
 @Index(['orgId'])
+@Index(['orgId', 'status'])
+@Index(['orgId', 'createdAt'])
 export class Alert {
   @PrimaryGeneratedColumn('uuid')
   id: string;
