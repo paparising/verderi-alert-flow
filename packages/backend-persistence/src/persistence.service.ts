@@ -20,12 +20,34 @@ export class EventPersistenceService implements OnModuleInit, OnModuleDestroy {
     this.kafka = new Kafka({
       clientId: 'vederi-alert-flow-persistence',
       brokers: [this.configService.get<string>('KAFKA_BROKER', 'localhost:9092')],
+      connectionTimeout: 10000,
+      retry: {
+        initialRetryTime: 1000,
+        retries: 10,
+      },
     });
     this.consumer = this.kafka.consumer({ groupId: 'alert-events-persistence-group' });
   }
 
+  private async connectWithRetry(maxRetries = 10, delayMs = 3000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.consumer.connect();
+        console.log('[Persistence Service] Kafka Consumer connected');
+        return;
+      } catch (error) {
+        console.warn(`[Persistence Service] Kafka connection attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+        if (attempt === maxRetries) {
+          console.error('[Persistence Service] Max retries reached, giving up');
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
   async onModuleInit() {
-    await this.consumer.connect();
+    await this.connectWithRetry();
     console.log('[Persistence Service] Kafka Consumer connected');
 
     await this.consumer.subscribe({ topic: 'alert-events', fromBeginning: false });

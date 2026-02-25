@@ -11,13 +11,34 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
     this.kafka = new Kafka({
       clientId: 'vederi-alert-flow-api',
       brokers: [this.configService.get<string>('KAFKA_BROKER', 'localhost:9092')],
+      connectionTimeout: 10000,
+      retry: {
+        initialRetryTime: 1000,
+        retries: 10,
+      },
     });
     this.producer = this.kafka.producer();
   }
 
   async onModuleInit() {
-    await this.producer.connect();
-    console.log('[Kafka Producer] Connected');
+    await this.connectWithRetry();
+  }
+
+  private async connectWithRetry(maxRetries = 10, delayMs = 3000) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.producer.connect();
+        console.log('[Kafka Producer] Connected');
+        return;
+      } catch (error) {
+        console.warn(`[Kafka Producer] Connection attempt ${attempt}/${maxRetries} failed: ${error.message}`);
+        if (attempt === maxRetries) {
+          console.error('[Kafka Producer] Max retries reached, giving up');
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
   }
 
   async onModuleDestroy() {

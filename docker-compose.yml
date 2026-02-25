@@ -10,6 +10,14 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -21,7 +29,8 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
     ports:
       - "9092:9092"
     environment:
@@ -31,6 +40,12 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server localhost:9092
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   backend-api:
     build:
@@ -42,11 +57,17 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       KAFKA_BROKER: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "${PORT:-3001}:3000"
     depends_on:
-      - db
-      - kafka
+      db:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
 
   backend-persistence:
@@ -60,8 +81,10 @@ services:
       DB_PORT: 5432
       KAFKA_BROKER: kafka:9092
     depends_on:
-      - db
-      - kafka
+      db:
+        condition: service_started
+      kafka:
+        condition: service_healthy
     restart: unless-stopped
 
   backend-notification:
@@ -73,7 +96,8 @@ services:
     environment:
       KAFKA_BROKER: kafka:9092
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -89,3 +113,4 @@ services:
 
 volumes:
   db_data:
+  redis_data:
