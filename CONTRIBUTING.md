@@ -29,10 +29,25 @@ docker compose --env-file .env.dev up --build
 
 ### Manual Setup
 
-**Backend:**
+**Backend services:**
+
+Build shared first, then run any service you need. Examples:
 
 ```bash
-cd packages/backend
+npm run build:shared
+
+# API
+cd packages/backend-api
+npm install
+npm run start:dev
+
+# Persistence consumer
+cd packages/backend-persistence
+npm install
+npm run start:dev
+
+# Notification consumer
+cd packages/backend-notification
 npm install
 npm run start:dev
 ```
@@ -54,13 +69,7 @@ npm start
 
 ### Backend
 
-```bash
-cd packages/backend
-npm run lint          # Run linter
-npm run format        # Format code
-npm run test          # Run tests
-npm run test:e2e      # Run e2e tests
-```
+Run commands in each service as needed (backend-api, backend-persistence, backend-notification). Shared: `npm run build:shared`.
 
 ### Frontend
 

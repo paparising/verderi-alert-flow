@@ -20,12 +20,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build backend image
+      - name: Build backend-api image
         uses: docker/build-push-action@v4
         with:
-          context: ./packages/backend
+          context: ./packages/backend-api
           push: false
-          tags: vederi-alert-flow-backend:latest
+          tags: vederi-alert-flow-backend-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build backend-persistence image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./packages/backend-persistence
+          push: false
+          tags: vederi-alert-flow-backend-persistence:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build backend-notification image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./packages/backend-notification
+          push: false
+          tags: vederi-alert-flow-backend-notification:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

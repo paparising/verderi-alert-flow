@@ -7,7 +7,7 @@ on:
     branches: [main, develop]
 
 jobs:
-  backend-test:
+  backend-api:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -32,25 +32,106 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: packages/backend/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            packages/backend-api/package-lock.json
+            packages/shared/package-lock.json
 
-      - name: Install dependencies (backend)
-        working-directory: packages/backend
+      - name: Install dependencies (root)
         run: npm install
 
-      - name: Build backend
-        working-directory: packages/backend
-        run: npm run build
+      - name: Build shared
+        run: npm run build:shared
 
-      - name: Run tests
-        working-directory: packages/backend
-        run: npm run test
+      - name: Build backend-api
+        run: npm run build:api:only
+
+      - name: Test backend-api
+        run: npm run test:api
         env:
           DB_HOST: localhost
           DB_PORT: 5432
           DB_USER: postgres
           DB_PASS: password
           DB_NAME: vederi_test
+          KAFKA_BROKER: localhost:9092
+
+  backend-persistence:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: vederi_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            packages/backend-persistence/package-lock.json
+            packages/shared/package-lock.json
+
+      - name: Install dependencies (root)
+        run: npm install
+
+      - name: Build shared
+        run: npm run build:shared
+
+      - name: Build backend-persistence
+        run: npm run build:persistence:only
+
+      - name: Test backend-persistence
+        run: npm run test:persistence
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASS: password
+          DB_NAME: vederi_test
+          KAFKA_BROKER: localhost:9092
+
+  backend-notification:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            packages/backend-notification/package-lock.json
+            packages/shared/package-lock.json
+
+      - name: Install dependencies (root)
+        run: npm install
+
+      - name: Build shared
+        run: npm run build:shared
+
+      - name: Build backend-notification
+        run: npm run build:notification:only
+
+      - name: Test backend-notification
+        run: npm run test:notification
 
   frontend-test:
     runs-on: ubuntu-latest

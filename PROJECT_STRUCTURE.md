@@ -363,9 +363,7 @@ For Kubernetes:
 - Add health check endpoints
 - Use managed Kafka (AWS MSK, Confluent Cloud)
 
-## Migration from Old Backend
-
-The old monolithic `packages/backend` is **deprecated**. All functionality has been split into:
+## Backend Services
 
 - `packages/shared` - Common code
 - `packages/backend-api` - REST API + WebSocket + Producer

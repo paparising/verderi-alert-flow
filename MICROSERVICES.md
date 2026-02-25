@@ -144,28 +144,25 @@ This starts **7 containers**:
 **API Service only:**
 
 ```bash
-cd packages/backend
+cd packages/backend-api
+npm install
 npm run start:dev
-# or
-npm run start:api
 ```
 
 **Persistence Service only:**
 
 ```bash
-cd packages/backend
-npm run start:persistence
-# or in production
-npm run start:persistence:prod
+cd packages/backend-persistence
+npm install
+npm run start:dev
 ```
 
 **Notification Service only:**
 
 ```bash
-cd packages/backend
-npm run start:notification
-# or in production
-npm run start:notification:prod
+cd packages/backend-notification
+npm install
+npm run start:dev
 ```
 
 ## Scaling Strategies
