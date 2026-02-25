@@ -1,0 +1,38 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (we build inside Docker)
+**/dist
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+docker-startup.log
+
+# Documentation
+*.md
+LICENSE
+CONTRIBUTING.md
+
+# Environment files (injected via env_file in compose)
+.env.*
+
+# Frontend (has its own build context)
+packages/frontend
+
+# Tests
+**/__tests__
+**/*.spec.ts
+**/*.test.ts
+**/jest.config.*
+**/coverage
