@@ -6,6 +6,10 @@ export class CreateAlertEventDto {
   orgId: string;
 
   @IsNotEmpty()
+  @IsUUID()
+  alertId: string;
+
+  @IsNotEmpty()
   @IsObject()
   eventData: Record<string, any>;
 

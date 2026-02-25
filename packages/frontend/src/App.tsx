@@ -2,213 +2,373 @@ import React, { useState, FormEvent } from 'react';
 import { AlertsList } from './components/AlertsList';
 import './App.css';
 
-interface UserForm {
-  name: string;
-  address: string;
-  email: string;
-  phone: string;
-  organizationId: string;
+type Role = 'superadmin' | 'admin' | 'user';
+const ALERT_STATUS_OPTIONS = ['New', 'Acknowledged', 'Resolved'] as const;
+type AlertStatus = (typeof ALERT_STATUS_OPTIONS)[number];
+
+interface SessionState {
+  token: string;
+  orgId: string;
+  userId: string;
+  role: Role;
+  email?: string;
 }
 
+interface AlertFormState {
+  alertContext: string;
+  status: AlertStatus;
+}
+
+interface OrgUser {
+  id: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  address?: string;
+  phone?: string;
+  createdAt?: string;
+}
+
+const DEFAULT_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+const decodeJwt = (token: string) => {
+  try {
+    const [, payload] = token.split('.');
+    const decoded = JSON.parse(atob(payload));
+    return {
+      userId: decoded.sub as string,
+      orgId: decoded.orgId as string,
+      role: (decoded.roles?.[0] as Role) || 'user',
+      email: decoded.email as string | undefined,
+    };
+  } catch (err) {
+    console.error('Failed to decode JWT', err);
+    return null;
+  }
+};
+
 function App() {
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'alerts' | 'settings'>('dashboard');
-  const [form, setForm] = useState<UserForm>({
-    name: '',
-    address: '',
-    email: '',
-    phone: '',
-    organizationId: '',
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [session, setSession] = useState<SessionState | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'alerts' | 'users'>('alerts');
+
+  const [alertForm, setAlertForm] = useState<AlertFormState>({
+    alertContext: '',
+    status: 'New',
   });
-  const [message, setMessage] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [alertLoading, setAlertLoading] = useState(false);
 
-  // For demo purposes - in production, this would come from auth context
-  const currentOrgId = 'replace-with-actual-org-id';
+  const [users, setUsers] = useState<OrgUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+    setAuthError(null);
+    setAuthLoading(true);
+
+    const base = DEFAULT_API_URL.replace(/\/$/, '');
     try {
-      const res = await fetch(`${apiUrl}/users`, {
+      const res = await fetch(`${base}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(loginForm),
       });
-      if (!res.ok) throw new Error('Request failed');
-      const data = await res.json();
-      setMessage('User created with id ' + data.id);
-      setForm({ name: '', address: '', email: '', phone: '', organizationId: '' });
-      setTimeout(() => {
-        setShowUserModal(false);
-        setMessage(null);
-      }, 2000);
-    } catch (err) {
-      setMessage('Error creating user');
-      console.error(err);
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.accessToken) {
+        throw new Error(body?.message || 'Login failed');
+      }
+
+      const decoded = decodeJwt(body.accessToken);
+      if (!decoded?.orgId || !decoded?.userId) {
+        throw new Error('Token is missing orgId or userId');
+      }
+
+      setSession({
+        token: body.accessToken,
+        orgId: decoded.orgId,
+        userId: decoded.userId,
+        role: decoded.role,
+        email: decoded.email,
+      });
+      setActiveTab('alerts');
+    } catch (err: any) {
+      setAuthError(err?.message || 'Login failed');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleAlertFormChange = (field: keyof AlertFormState, value: string) => {
+    setAlertForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleAlertSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!session) {
+      setAlertMessage('Please log in before creating an alert.');
+      return;
+    }
+
+    setAlertLoading(true);
+    setAlertMessage(null);
+
+    const base = DEFAULT_API_URL.replace(/\/$/, '');
+    try {
+      const res = await fetch(`${base}/alerts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({
+          alertContext: alertForm.alertContext,
+          status: 'New',
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to create alert');
+      }
+
+      setAlertMessage(`Alert created with id ${data?.id || 'success'}`);
+      setAlertForm({ alertContext: '', status: 'New' });
+    } catch (err: any) {
+      setAlertMessage(err?.message || 'Error creating alert');
+    } finally {
+      setAlertLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setSession(null);
+    setAlertMessage(null);
+    setUsers([]);
+    setUsersError(null);
+    setActiveTab('alerts');
+  };
+
+  const loadUsers = async (token: string, orgId: string) => {
+    setUsersLoading(true);
+    setUsersError(null);
+    try {
+      const base = DEFAULT_API_URL.replace(/\/$/, '');
+      const res = await fetch(`${base}/users`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const body = await res.json().catch(() => []);
+      if (!res.ok) {
+        throw new Error((body as any)?.message || 'Failed to load users');
+      }
+      const sorted = (body as OrgUser[]).sort((a, b) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+      );
+      setUsers(sorted);
+    } catch (err: any) {
+      setUsersError(err?.message || 'Error loading users');
+      setUsers([]);
+    } finally {
+      setUsersLoading(false);
     }
   };
 
   return (
     <div className="App">
-      {/* Header */}
       <header className="app-header">
         <div className="header-content">
           <h1>Vederi Alert Flow</h1>
-          <button className="btn-primary">Admin Dashboard</button>
+          {session ? (
+            <div className="session-badge">
+              <span>{session.email || loginForm.email}</span>
+              <button className="btn-secondary" onClick={handleLogout}>Log out</button>
+            </div>
+          ) : (
+            <span className="muted">Authenticate to manage alerts</span>
+          )}
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <nav className="app-nav">
-        <div className="nav-tabs">
-          <button 
-            className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <span className="icon">📋</span> Dashboard
-          </button>
-          <button 
-            className={`tab ${activeTab === 'alerts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('alerts')}
-          >
-            <span className="icon">🔔</span> Live Alerts
-          </button>
-          <button 
-            className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <span className="icon">⚙️</span> Settings
-          </button>
-        </div>
-      </nav>
-
-      {/* Main Content */}
       <main className="app-main">
-        <div className="content-container">
-          {activeTab === 'dashboard' && (
+        <div className="content-container auth-wrapper">
+          {!session && (
+            <section className="auth-card">
+              <p className="eyebrow">Login</p>
+              <h2>Sign in to your org</h2>
+              <p className="muted">Use the admin credentials created by superadmin. We will fetch a JWT and derive org/user context from it.</p>
+
+              {authError && <div className="inline-message error">{authError}</div>}
+
+              <form className="auth-form" onSubmit={handleLogin}>
+                <label className="field">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm((prev) => ({ ...prev, email: e.target.value }))}
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </label>
+
+                <label className="field">
+                  <span>Password</span>
+                  <input
+                    type="password"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
+                    placeholder="••••••••"
+                    required
+                  />
+                </label>
+
+                <button type="submit" className="btn-primary" disabled={authLoading}>
+                  {authLoading ? 'Signing in…' : 'Sign in'}
+                </button>
+              </form>
+            </section>
+          )}
+
+          {session && (
             <>
-              <div className="welcome-section">
-                <div className="icon-large">👥</div>
-                <h2>Admin Control Panel</h2>
-                <p>Manage users and organizations</p>
+              <div className="tabs-row">
+                <button
+                  className={`tab-button ${activeTab === 'alerts' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('alerts')}
+                >
+                  <span className="tab-icon" aria-hidden="true">🔔</span>
+                  <span>Alerts</span>
+                </button>
+                {(session.role === 'admin' || session.role === 'superadmin') && (
+                  <button
+                    className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTab('users');
+                      loadUsers(session.token, session.orgId);
+                    }}
+                  >
+                    <span className="tab-icon" aria-hidden="true">👤</span>
+                    <span>Users</span>
+                  </button>
+                )}
               </div>
 
-              <div className="action-buttons">
-                <button className="btn-action" onClick={() => setShowUserModal(true)}>
-                  <span className="btn-icon">➕</span>
-                  Create User
-                </button>
-                <button className="btn-action">
-                  <span className="btn-icon">🏢</span>
-                  Create Organization
-                </button>
-              </div>
+              {activeTab === 'alerts' && (
+                <>
+                  <div className="card">
+                    <div className="card-header">
+                      <div>
+                        <p className="eyebrow">Alerts</p>
+                        <p className="muted">Live list with optional “created by me” and status filters. WebSocket updates included.</p>
+                      </div>
+                    </div>
+                    <AlertsList orgId={session.orgId} apiUrl={DEFAULT_API_URL} token={session.token} />
+                  </div>
+
+                  <div className="card">
+                    <div className="card-header">
+                      <div>
+                        <p className="eyebrow">POST New Alerts</p>
+                      </div>
+                    </div>
+
+                    {alertMessage && <div className="inline-message">{alertMessage}</div>}
+
+                    <form className="alert-form" onSubmit={handleAlertSubmit}>
+                      <label className="field">
+                        <span>Alert Message</span>
+                        <textarea
+                          value={alertForm.alertContext}
+                          onChange={(e) => handleAlertFormChange('alertContext', e.target.value)}
+                          placeholder="CPU > 90% on node-1"
+                          required
+                        />
+                      </label>
+
+                      <div className="form-actions">
+                        <button type="submit" className="btn-primary" disabled={alertLoading}>
+                          {alertLoading ? 'Creating…' : 'Create alert'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => setAlertForm({ alertContext: '', status: 'New' })}
+                          disabled={alertLoading}
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'users' && (session.role === 'admin' || session.role === 'superadmin') && (
+                <div className="card">
+                  <div className="card-header">
+                    <div>
+                      <p className="eyebrow">Org users</p>
+                      <h3>Manage users in this organization</h3>
+                      <p className="muted">Read-only list for now. Add/edit flows can be wired next.</p>
+                    </div>
+                    <div className="role-chip" data-role={session.role}>
+                      <span className="dot" /> {session.role}
+                    </div>
+                  </div>
+
+                  {usersLoading && <div className="inline-message">Loading users…</div>}
+                  {usersError && <div className="inline-message error">{usersError}</div>}
+
+                  {!usersLoading && !usersError && (
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Phone</th>
+                            <th>Created</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="muted">No users found.</td>
+                            </tr>
+                          )}
+                          {users.map((u) => (
+                            <tr key={u.id}>
+                              <td>{u.name || '—'}</td>
+                              <td>{u.email || '—'}</td>
+                              <td><span className="pill muted-pill">{u.role || 'user'}</span></td>
+                              <td>{u.phone || '—'}</td>
+                              <td>{u.createdAt ? new Date(u.createdAt).toLocaleString() : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
-          )}
-
-          {activeTab === 'alerts' && (
-            <AlertsList orgId={currentOrgId} />
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="welcome-section">
-              <div className="icon-large">⚙️</div>
-              <h2>Settings</h2>
-              <p>Configure your alert system</p>
-            </div>
           )}
         </div>
       </main>
-
-      {/* Modal Overlay */}
-      {showUserModal && (
-        <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create New User</h3>
-              <button className="btn-close" onClick={() => setShowUserModal(false)}>
-                ✕
-              </button>
-            </div>
-
-            {message && <div className="message">{message}</div>}
-
-            <form onSubmit={handleSubmit} className="user-form">
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Enter full name"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Email *</label>
-                <input
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="user@example.com"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Address *</label>
-                <input
-                  name="address"
-                  value={form.address}
-                  onChange={handleChange}
-                  placeholder="Enter address"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Phone *</label>
-                <input
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  placeholder="Enter phone number"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Organization ID *</label>
-                <input
-                  name="organizationId"
-                  value={form.organizationId}
-                  onChange={handleChange}
-                  placeholder="Enter organization UUID"
-                  required
-                />
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowUserModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Create User
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
+export { App };
 export default App;

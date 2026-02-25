@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OrganizationController } from '../organization.controller';
 import { OrganizationService } from '../organization.service';
+import { SuperAdminGuard } from '../../guards';
+import { ConfigService } from '@nestjs/config';
 
 describe('OrganizationController', () => {
   let controller: OrganizationController;
@@ -26,6 +28,14 @@ describe('OrganizationController', () => {
         {
           provide: OrganizationService,
           useValue: mockService,
+        },
+        {
+          provide: SuperAdminGuard,
+          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn() },
         },
       ],
     }).compile();

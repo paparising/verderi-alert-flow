@@ -101,6 +101,7 @@ export class EventPersistenceService implements OnModuleInit, OnModuleDestroy {
       // Save alert event to database
       const event = this.alertEventRepo.create({
         orgId: eventData.orgId,
+        alertId: eventData.alertId || eventData.eventData?.alertId,
         eventId: eventData.eventId,
         eventData: eventData.eventData,
         createdBy: eventData.createdBy,

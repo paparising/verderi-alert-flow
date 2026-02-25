@@ -1,10 +1,11 @@
 import { IsNotEmpty, IsUUID, IsString, IsIn, IsOptional } from 'class-validator';
 import { AlertStatus } from '../enums/alert-status.enum';
 
+// orgId and createdBy come from JWT context in the API layer; they are optional on the wire.
 export class CreateAlertDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID()
-  orgId: string;
+  orgId?: string;
 
   @IsNotEmpty()
   @IsString()
@@ -14,7 +15,7 @@ export class CreateAlertDto {
   @IsIn(Object.values(AlertStatus))
   status?: AlertStatus;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsUUID()
-  createdBy: string;
+  createdBy?: string;
 }

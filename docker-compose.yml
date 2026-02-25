@@ -10,6 +10,19 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
+  pgadmin:
+    image: dpage/pgadmin4:8
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_started
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
   redis:
     image: redis:7-alpine
     ports:
@@ -54,6 +67,7 @@ services:
     env_file:
       - .env.dev
     environment:
+      PORT: 3000
       DB_HOST: db
       DB_PORT: 5432
       KAFKA_BROKER: kafka:9092
@@ -64,7 +78,7 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-vederi-alert-flow}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-vederi-alert-flow-clients}
     ports:
-      - "${PORT:-3001}:3000"
+      - "3001:3000"
     depends_on:
       db:
         condition: service_started
@@ -118,3 +132,4 @@ services:
 volumes:
   db_data:
   redis_data:
+  pgadmin_data:

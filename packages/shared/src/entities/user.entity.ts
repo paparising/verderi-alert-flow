@@ -18,6 +18,12 @@ export class User {
   @Column()
   phone: string;
 
+  @Column({ type: 'varchar', length: 20, default: 'user' })
+  role: 'user' | 'admin';
+
+  @Column({ select: false, nullable: true })
+  passwordHash?: string;
+
   @ManyToOne(() => Organization, (org) => org.users, { eager: true })
   organization: Organization;
 }

@@ -125,6 +125,13 @@ describe('AlertService', () => {
 
       expect(alertRepo.findOne).toHaveBeenCalledWith({ where: { id: 'alert-123', orgId: 'org-123' } });
       expect(alertRepo.save).toHaveBeenCalled();
+      expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
+        'alert-events',
+        expect.objectContaining({
+          alertId: 'alert-123',
+          eventData: expect.objectContaining({ alertId: 'alert-123' }),
+        }),
+      );
       expect(alertGateway.emitAlertStatusUpdate).toHaveBeenCalledWith('org-123', updatedAlert);
       expect(result.status).toBe(AlertStatus.ACKNOWLEDGED);
     });
@@ -133,7 +140,7 @@ describe('AlertService', () => {
       alertRepo.findOne.mockResolvedValue(null);
 
       await expect(service.updateAlertStatus('non-existent', 'org-123', AlertStatus.ACKNOWLEDGED, 'user-456'))
-        .rejects.toThrow('Alert not found');
+        .rejects.toThrow('Alert not found in this organization');
     });
 
     it('should increment version on update for optimistic locking', async () => {
@@ -146,6 +153,13 @@ describe('AlertService', () => {
       const result = await service.updateAlertStatus('alert-123', 'org-123', AlertStatus.RESOLVED, 'user-789');
 
       expect(result.version).toBe(2);
+      expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
+        'alert-events',
+        expect.objectContaining({
+          alertId: 'alert-123',
+          eventData: expect.objectContaining({ alertId: 'alert-123' }),
+        }),
+      );
     });
   });
 });

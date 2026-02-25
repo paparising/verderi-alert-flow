@@ -1,29 +1,29 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { CreateOrganizationDto } from '@vederi/shared';
-import { Roles } from '../decorators';
+import { Public } from '../decorators';
 import { SuperAdminGuard } from '../guards';
 
 @Controller('organizations')
 export class OrganizationController {
   constructor(private readonly orgService: OrganizationService) {}
 
+  @Public()
   @Post()
-  @Roles('superadmin')
   @UseGuards(SuperAdminGuard)
   create(@Body() dto: CreateOrganizationDto) {
     return this.orgService.create(dto);
   }
 
+  @Public()
   @Get()
-  @Roles('superadmin')
   @UseGuards(SuperAdminGuard)
   findAll() {
     return this.orgService.findAll();
   }
 
+  @Public()
   @Get(':id')
-  @Roles('superadmin')
   @UseGuards(SuperAdminGuard)
   findOne(@Param('id') id: string) {
     return this.orgService.findOne(id);
