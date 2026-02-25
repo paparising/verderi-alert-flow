@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertEvent, Organization, User, Alert, ProcessedEvent } from '@vederi/shared';
 import { EventPersistenceService } from './persistence.service';
+import { parseLogLevels } from '@vederi/shared';
 
 @Module({
   imports: [
@@ -30,10 +31,11 @@ class PersistenceModule {}
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(PersistenceModule, {
-    logger: ['log', 'error', 'warn'],
+    logger: parseLogLevels(process.env.LOG_LEVEL),
   });
   await app.init();
-  console.log('[Persistence Microservice] Service started and listening to Kafka...');
+  const logger = new Logger('PersistenceBootstrap');
+  logger.log('Service started and listening to Kafka...');
 }
 
 bootstrap();

@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { OrganizationModule } from './organization/organization.module';
@@ -15,6 +15,7 @@ import { Organization, User, Alert, AlertEvent, ProcessedEvent } from '@vederi/s
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './guards';
+import { HttpExceptionFilter } from '@vederi/shared';
 
 @Module({
   imports: [
@@ -57,6 +58,10 @@ import { RolesGuard } from './guards';
     {
       provide: APP_INTERCEPTOR,
       useClass: RateLimitHeadersInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
     },
   ],
 })

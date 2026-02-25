@@ -9,6 +9,7 @@
     "watch": "tsc --watch"
   },
   "dependencies": {
+    "@nestjs/common": "^10.4.0",
     "class-validator": "^0.14.0",
     "typeorm": "^0.3.16"
   },
