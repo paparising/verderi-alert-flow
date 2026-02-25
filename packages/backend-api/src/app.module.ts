@@ -11,7 +11,10 @@ import { AlertModule } from './alert/alert.module';
 import { RedisModule } from './redis/redis.module';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { RateLimitHeadersInterceptor } from './interceptors/rate-limit-headers.interceptor';
-import { Organization, User, Alert, AlertEvent } from '@vederi/shared';
+import { Organization, User, Alert, AlertEvent, ProcessedEvent } from '@vederi/shared';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { RolesGuard } from './guards';
 
 @Module({
   imports: [
@@ -26,17 +29,27 @@ import { Organization, User, Alert, AlertEvent } from '@vederi/shared';
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASS || 'password',
       database: process.env.DB_NAME || 'vederi',
-      entities: [Organization, User, Alert, AlertEvent],
+      entities: [Organization, User, Alert, AlertEvent, ProcessedEvent],
       synchronize: true,
     }),
     RedisModule,
     OrganizationModule,
     UserModule,
     AlertModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      // Auth guard runs before rate limiting so orgId is available from JWT
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: RateLimitGuard,

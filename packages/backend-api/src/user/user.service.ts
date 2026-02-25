@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User, Organization, CreateUserDto } from '@vederi/shared';
@@ -12,10 +12,10 @@ export class UserService {
     private orgRepo: Repository<Organization>,
   ) {}
 
-  async create(dto: CreateUserDto) {
-    const org = await this.orgRepo.findOne({ where: { id: dto.organizationId } });
+  async createForOrg(dto: CreateUserDto, orgId: string) {
+    const org = await this.orgRepo.findOne({ where: { id: orgId } });
     if (!org) {
-      throw new Error('Organization not found');
+      throw new ForbiddenException('Organization not found');
     }
     const user = this.userRepo.create({
       name: dto.name,
@@ -27,11 +27,15 @@ export class UserService {
     return this.userRepo.save(user);
   }
 
-  findAll() {
-    return this.userRepo.find({ relations: ['organization'] });
+  findAllByOrg(orgId: string) {
+    return this.userRepo.find({ where: { organization: { id: orgId } }, relations: ['organization'] });
   }
 
-  findOne(id: string) {
-    return this.userRepo.findOne({ where: { id }, relations: ['organization'] });
+  async findOneByOrg(id: string, orgId: string) {
+    const user = await this.userRepo.findOne({ where: { id, organization: { id: orgId } }, relations: ['organization'] });
+    if (!user) {
+      throw new ForbiddenException('User not found in this organization');
+    }
+    return user;
   }
 }

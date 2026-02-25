@@ -59,6 +59,10 @@ services:
       KAFKA_BROKER: kafka:9092
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-dev-change-me}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      JWT_ISSUER: ${JWT_ISSUER:-vederi-alert-flow}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vederi-alert-flow-clients}
     ports:
       - "${PORT:-3001}:3000"
     depends_on:

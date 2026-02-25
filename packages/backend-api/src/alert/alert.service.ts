@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert, AlertEvent, CreateAlertDto, CreateAlertEventDto, AlertStatus } from '@vederi/shared';
@@ -50,7 +50,7 @@ export class AlertService {
       where: { id, orgId },
     });
     if (!alert) {
-      throw new Error('Alert not found');
+      throw new ForbiddenException('Alert not found in this organization');
     }
     const previousStatus = alert.status;
     alert.status = status;
