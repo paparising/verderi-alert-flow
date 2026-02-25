@@ -3,10 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizationService } from './organization.service';
 import { OrganizationController } from './organization.controller';
 import { Organization } from '@vederi/shared';
+import { SuperAdminGuard } from '../guards';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Organization])],
-  providers: [OrganizationService],
+  providers: [OrganizationService, SuperAdminGuard],
   controllers: [OrganizationController],
   exports: [OrganizationService],
 })
