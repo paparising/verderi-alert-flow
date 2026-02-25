@@ -228,6 +228,24 @@
   font-size: 13px;
 }
 
+.alert-actions .btn-danger:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+.alerts-container .btn-secondary {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  min-width: 68px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
 .inline-message {
   background: #eef2ff;
   border: 1px solid #c7d2fe;
@@ -292,6 +310,7 @@
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .timeline {

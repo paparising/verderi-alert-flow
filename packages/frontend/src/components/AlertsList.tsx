@@ -15,6 +15,15 @@ const PAGE_SIZE_OPTIONS = [5, 10, 20];
 type EditableStatus = Exclude<StatusFilter, ''>;
 const EDITABLE_STATUS_OPTIONS: EditableStatus[] = ['New', 'Acknowledged', 'Resolved'];
 
+const normalizeStatus = (status: string) => status?.toLowerCase?.() || '';
+const formatStatusLabel = (status: string) => {
+  const lower = normalizeStatus(status);
+  if (lower === 'new') return 'New';
+  if (lower === 'acknowledged') return 'Acknowledged';
+  if (lower === 'resolved') return 'Resolved';
+  return status;
+};
+
 export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(false);
@@ -177,12 +186,13 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
   const setPageSafe = (next: number) => setPage(Math.min(Math.max(1, next), totalPages));
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'New':
+    const lower = normalizeStatus(status);
+    switch (lower) {
+      case 'new':
         return '#6a4cfe';
-      case 'Acknowledged':
+      case 'acknowledged':
         return '#fbb040';
-      case 'Resolved':
+      case 'resolved':
         return '#22c55e';
       default:
         return '#999';
@@ -253,7 +263,8 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
   };
 
   const handleDeleteAlert = async (alert: Alert) => {
-    if (alert.status !== 'Resolved') {
+    const isResolved = normalizeStatus(alert.status) === 'resolved';
+    if (!isResolved) {
       setSelectedAlert(alert);
       setEditForm({ alertContext: alert.alertContext, status: alert.status as EditableStatus });
       setActionError('Only resolved alerts can be deleted.');
@@ -373,7 +384,7 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
                       className="alert-status"
                       style={{ backgroundColor: getStatusColor(alert.status) }}
                     >
-                      {alert.status}
+                      {formatStatusLabel(alert.status)}
                     </span>
                   </div>
                   <div className="alert-context">{alert.alertContext}</div>
@@ -390,7 +401,7 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
                     <button
                       className="btn-danger"
                       onClick={(e) => { e.stopPropagation(); handleDeleteAlert(alert); }}
-                      disabled={alert.status !== 'Resolved' || (actionLoading && isEditing)}
+                      disabled={normalizeStatus(alert.status) !== 'resolved' || (actionLoading && isEditing)}
                     >
                       Delete
                     </button>
@@ -463,7 +474,7 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
             </div>
 
             <div className="modal-meta-row">
-              <span className="pill" style={{ backgroundColor: getStatusColor(detailAlert.status) }}>{detailAlert.status}</span>
+              <span className="pill" style={{ backgroundColor: getStatusColor(detailAlert.status) }}>{formatStatusLabel(detailAlert.status)}</span>
               <span className="muted">Created {new Date(detailAlert.createdAt).toLocaleString()}</span>
               <span className="muted">Updated {new Date(detailAlert.updatedAt).toLocaleString()}</span>
             </div>

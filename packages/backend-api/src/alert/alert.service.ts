@@ -158,6 +158,8 @@ export class AlertService {
     if (!alert) {
       throw new ForbiddenException('Alert not found in this organization');
     }
+    // Remove child events first to satisfy FK constraint before deleting alert
+    await this.alertEventRepo.delete({ alertId: alert.id, orgId });
     await this.alertRepo.delete({ id, orgId });
     return { success: true };
   }

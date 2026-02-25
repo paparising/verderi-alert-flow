@@ -194,7 +194,7 @@
 
 .tabs-row {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   padding: 10px;
   background: #eef0f6;
