@@ -1,5 +1,6 @@
 import React, { useState, FormEvent } from 'react';
 import { AlertsList } from './components/AlertsList';
+import { UsersList } from './components/UsersList';
 import './App.css';
 
 type Role = 'superadmin' | 'admin' | 'user';
@@ -429,71 +430,18 @@ function App() {
 
               {activeTab === 'users' && (session.role === 'admin' || session.role === 'superadmin') && (
                 <>
-                  <div className="card">
-                    <div className="card-header">
-                      <div>
-                        <p className="eyebrow">Org users</p>
-                        <h3>Manage users in this organization</h3>
-                      </div>
-                      <div className="role-chip" data-role={session.role}>
-                        <span className="dot" /> {session.role}
-                      </div>
-                    </div>
-
-                    {usersLoading && <div className="inline-message">Loading users…</div>}
-                    {usersError && <div className="inline-message error">{usersError}</div>}
-
-                    {!usersLoading && !usersError && (
-                      <div className="table-wrapper">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Email</th>
-                              <th>Role</th>
-                              <th>Phone</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {users.length === 0 && (
-                              <tr>
-                                <td colSpan={5} className="muted">No users found.</td>
-                              </tr>
-                            )}
-                            {users.map((u) => (
-                              <tr key={u.id}>
-                                <td>{u.name || '—'}</td>
-                                <td>{u.email || '—'}</td>
-                                <td><span className="pill muted-pill">{u.role || 'user'}</span></td>
-                                <td>{u.phone || '—'}</td>
-                                <td>
-                                  <button
-                                    className="btn-primary"
-                                    onClick={() => {
-                                      setEditingUserId(u.id);
-                                      setEditUserForm({ name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', role: (u.role as 'user' | 'admin') || 'user', password: '' });
-                                    }}
-                                    disabled={userFormLoading}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    className="btn-danger"
-                                    onClick={() => handleDeleteUser(u.id)}
-                                    disabled={userFormLoading}
-                                    style={{ marginLeft: '0.5rem' }}
-                                  >
-                                    Delete
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
+                  <UsersList
+                    users={users}
+                    loading={usersLoading}
+                    error={usersError}
+                    sessionRole={session.role}
+                    userFormLoading={userFormLoading}
+                    onEdit={(u) => {
+                      setEditingUserId(u.id);
+                      setEditUserForm({ name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', role: (u.role as 'user' | 'admin') || 'user', password: '' });
+                    }}
+                    onDelete={handleDeleteUser}
+                  />
 
                   {editingUserId && editUserForm && (
                     <div className="card">
