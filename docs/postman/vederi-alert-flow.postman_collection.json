@@ -2,7 +2,7 @@
   "info": {
     "name": "Vederi Alert Flow API",
     "_postman_id": "c9b3d06d-0000-4c00-8000-000000000001",
-    "description": "Backend API endpoints with superadmin/user/admin flows.",
+    "description": "API collection for superadmin org setup, admin user management, auth, alerts, and alert events.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,12 +11,31 @@
     { "key": "superApiKey", "value": "dev-superadmin-key" },
     { "key": "orgId", "value": "11111111-2222-3333-4444-555555555555" },
     { "key": "alertId", "value": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
-    { "key": "userId", "value": "99999999-8888-7777-6666-555555555555" }
+    { "key": "userId", "value": "99999999-8888-7777-6666-555555555555" },
+    { "key": "jwtAdmin", "value": "" },
+    { "key": "jwtUser", "value": "" }
   ],
   "item": [
     {
       "name": "Health",
       "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (email/password)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPass123\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
     },
     {
       "name": "Organizations (superadmin headers)",
@@ -62,40 +81,10 @@
       ]
     },
     {
-      "name": "Users (superadmin create, admin scoped ops)",
+      "name": "Users (admin JWT)",
       "item": [
         {
-          "name": "Superadmin: Create Admin/User for Org",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "x-superuser", "value": "{{superUser}}" },
-              { "key": "x-api-key", "value": "{{superApiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Admin User\",\n  \"address\": \"123 Main St\",\n  \"email\": \"admin@example.com\",\n  \"phone\": \"555-1234\",\n  \"organizationId\": \"{{orgId}}\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"admin\"\n}"
-            },
-            "url": "{{baseUrl}}/superadmin/users/admin"
-          }
-        },
-        {
-          "name": "Auth: Login (email/password)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPass123\"\n}"
-            },
-            "url": "{{baseUrl}}/auth/login"
-          }
-        },
-        {
-          "name": "Admin: Create Org User (uses orgId from JWT)",
+          "name": "Create Org User (password required)",
           "request": {
             "method": "POST",
             "header": [
@@ -104,13 +93,13 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Org User\",\n  \"address\": \"123 Main St\",\n  \"email\": \"user1@example.com\",\n  \"phone\": \"555-9999\",\n  \"organizationId\": \"{{orgId}}\"\n}"
+              "raw": "{\n  \"name\": \"Org User\",\n  \"address\": \"123 Main St\",\n  \"email\": \"user1@example.com\",\n  \"phone\": \"555-9999\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"admin\"\n}"
             },
             "url": "{{baseUrl}}/users"
           }
         },
         {
-          "name": "Admin: List Users",
+          "name": "List Users",
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
@@ -118,9 +107,32 @@
           }
         },
         {
-          "name": "Admin: Get User by ID",
+          "name": "Get User by ID",
           "request": {
             "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Update User (password optional)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"phone\": \"555-0000\",\n  \"password\": \"NewStrongPass123\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
             "url": "{{baseUrl}}/users/{{userId}}"
           }
@@ -128,7 +140,7 @@
       ]
     },
     {
-      "name": "Alerts (org-scoped, admin/user)",
+      "name": "Alerts (org-scoped)",
       "item": [
         {
           "name": "Create Alert",
@@ -140,7 +152,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"CPU High\",\n  \"description\": \"CPU usage > 90%\",\n  \"severity\": \"high\",\n  \"status\": \"open\"\n}"
+              "raw": "{\n  \"alertContext\": \"CPU usage > 90%\",\n  \"status\": \"New\"\n}"
             },
             "url": "{{baseUrl}}/alerts"
           }
@@ -151,10 +163,13 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
             "url": {
-              "raw": "{{baseUrl}}/alerts?status=open",
+              "raw": "{{baseUrl}}/alerts?status=New&mine=false",
               "host": ["{{baseUrl}}"],
               "path": ["alerts"],
-              "query": [{ "key": "status", "value": "open" }]
+              "query": [
+                { "key": "status", "value": "New" },
+                { "key": "mine", "value": "false" }
+              ]
             }
           }
         },
@@ -168,9 +183,32 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"resolved\"\n}"
+              "raw": "{\n  \"status\": \"Acknowledged\"\n}"
             },
             "url": "{{baseUrl}}/alerts/{{alertId}}/status"
+          }
+        },
+        {
+          "name": "Update Alert (context/status)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alertContext\": \"Adjusted context\",\n  \"status\": \"Resolved\"\n}"
+            },
+            "url": "{{baseUrl}}/alerts/{{alertId}}"
+          }
+        },
+        {
+          "name": "Delete Alert",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
+            "url": "{{baseUrl}}/alerts/{{alertId}}"
           }
         },
         {

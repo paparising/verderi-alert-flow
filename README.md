@@ -1,60 +1,114 @@
 # Vederi Alert Flow
 
-This monorepo contains these services:
+Event-driven alert management built with NestJS, React, Kafka, Postgres, and WebSockets. This README now replaces the scattered Markdown docs; everything you need is here.
 
-- **frontend** (`packages/frontend`) – React + TypeScript user interface
-- **backend-api** (`packages/backend-api`) – REST API + WebSocket + Kafka producer
-- **backend-persistence** (`packages/backend-persistence`) – Kafka consumer persisting events to Postgres
-- **backend-notification** (`packages/backend-notification`) – Kafka consumer sending WebSocket notifications
+## Architecture
 
-## Environment Configuration
+- **frontend** (`packages/frontend`): React + TypeScript served by Nginx.
+- **backend-api** (`packages/backend-api`): REST + WebSocket gateway, Kafka producer, auth/roles.
+- **backend-persistence** (`packages/backend-persistence`): Kafka consumer that persists alert events to Postgres.
+- **backend-notification** (`packages/backend-notification`): Kafka consumer that emits WebSocket notifications.
+- **shared** (`packages/shared`): DTOs, entities, enums shared across services.
 
-Both frontend and backend use `.env` files for configuration:
+Event flow: API writes/updates alerts → publishes to Kafka → persistence consumer stores history → notification consumer pushes real-time events. WebSockets also stream immediate alert changes from the API service.
 
-### Backend API (`packages/backend-api/.env`)
+## Quickstart
 
-See `.env.dev` / `.env.prod` in each service for templates.
-
-See `.env.example` files in each package for templates.
-
-docker compose --env-file .env.dev up --build
-docker compose --env-file .env.prod up --build -d
-
-## Docker Compose (local dev & production)
-
-Run the stack (frontend + 3 backend services + Postgres + Kafka + Zookeeper) with:
-
-**Development:**
+**Prereqs:** Docker + Docker Compose, Node 18+, npm.
 
 ```bash
-# from repo root - uses .env.dev
+# from repo root
+cp .env.dev.example .env.dev   # if provided
 docker compose --env-file .env.dev up --build
 ```
 
-**Production:**
+Services:
 
-```bash
-# from repo root - uses .env.prod
-docker compose --env-file .env.prod up --build -d
+- Frontend: http://localhost
+- API: http://localhost:3001
+- Postgres: localhost:5438 (inside compose: db:5432)
+- Kafka: localhost:9092 (inside compose: kafka:9092)
+
+Stop: `docker compose down`
+
+## Environment
+
+Each service has `.env.dev` / `.env.prod` in its folder; compose can also read root `.env.dev` / `.env.prod`.
+
+Common variables (root or per-service):
+
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`
+- `KAFKA_BROKER`
+- `PORT` (API external), `NODE_ENV`
+- Frontend: `REACT_APP_API_URL`, `REACT_APP_WS_URL`
+
+Priority when running compose: shell env > service `environment:` > `--env-file` > service `.env`. Keep production secrets out of git.
+
+## Local Development
+
+Install dependencies once: `npm run install:all`
+
+Build all: `npm run build:all`
+
+Run individually (after `npm run build:shared`):
+
+- API: `npm run dev:api` (or inside package: `npm run start:dev`)
+- Persistence: `npm run dev:persistence`
+- Notification: `npm run dev:notification`
+- Frontend: `npm run dev:frontend` (React dev server)
+
+Tests: `npm test` (root) or per workspace (`npm run test --workspace=frontend -- --watch=false`).
+
+## API + Auth
+
+- Superadmin-only org management: headers `x-superuser` and `x-api-key` on `/organizations` endpoints.
+- Auth: `POST /auth/login` with `email`, `password` → JWT.
+- Admin-only user management: `/users` CRUD; `password` required on create, optional on update. Role defaults to `user` if omitted.
+- Alerts (admin/user): create/list/update/delete via `/alerts`; status values: `New`, `Acknowledged`, `Resolved`. Alert events history at `/alerts/{id}/events`.
+
+Roles are enforced via JWT claims; org scoping is derived from the token (`orgId`, `userId`).
+
+## Kafka & WebSockets
+
+- Topic: `alert-events`
+- Producer: backend-api
+- Consumers: backend-persistence (`alert-events-persistence-group`), backend-notification (`alert-events-notification-group`)
+- WebSocket gateway (Socket.IO) runs in backend-api and backend-notification; clients join org rooms and receive `newAlert`, `alertStatusUpdate`, `alertEvent`.
+
+## Project Structure
+
+```
+vederi-alert-flow/
+├─ packages/
+│  ├─ shared/                  # DTOs, entities, enums
+│  ├─ backend-api/             # REST + WS + Kafka producer (port 3001 external)
+│  ├─ backend-persistence/     # Kafka consumer → Postgres
+│  ├─ backend-notification/    # Kafka consumer → WebSocket
+│  └─ frontend/                # React app (served by Nginx)
+├─ docker-compose.yml
+├─ docs/postman/vederi-alert-flow.postman_collection.json
+└─ README.md (this file)
 ```
 
-- Frontend: `http://localhost` (port 80)
-- Backend API: `http://localhost:3003` (from .env.dev)
-- PostgreSQL: exposed on host port 5438
+## Operations Cheatsheet
 
-## Building individually
+- Compose dev: `docker compose --env-file .env.dev up --build`
+- Compose prod-ish: `docker compose --env-file .env.prod up --build -d`
+- Logs (all): `docker compose logs -f`
+- Scale consumers: `docker compose up --scale backend-persistence=3 --scale backend-notification=3`
 
-```bash
-npm run build:shared
-npm run build:api:only
-npm run build:persistence:only
-npm run build:notification:only
-```
+## Postman Collection
 
-## Notes
+Updated collection lives at `docs/postman/vederi-alert-flow.postman_collection.json` with environment variables for base URL, superadmin headers, JWTs, and sample payloads that include password fields for user create/update.
 
-- Each backend service reads its own `.env.dev`/`.env.prod`.
-- Frontend uses `REACT_APP_API_URL` env variable to determine backend API endpoint.
-- JWT secrets and database passwords should never be committed to git (`.env` is in `.gitignore`).
+## Troubleshooting
 
-Feel free to adjust the compose file or Dockerfiles for your deployment requirements.
+- API can’t reach DB: confirm `DB_HOST=db` inside Docker or `localhost` locally; external port 5438 maps to container 5432.
+- Kafka consumers idle: check `KAFKA_BROKER` and consumer group IDs; use `kafka-consumer-groups` inside the Kafka container.
+- WebSocket issues: ensure `REACT_APP_WS_URL` matches API base; check backend logs for connection events.
+
+## Contributing
+
+- TypeScript across services; lint/format before PRs.
+- Conventional commits preferred (feat/fix/docs/etc.).
+- Keep shared changes exported from `packages/shared/src/index.ts` and rebuild shared before running dependents.
