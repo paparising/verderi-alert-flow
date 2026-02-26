@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Patch, Delete, Req, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from '@vederi/shared';
+import { CreateUserDto, UpdateUserDto } from '@vederi/shared';
 import { Roles } from '../decorators';
 import { Role } from '../decorators/roles.decorator';
 
@@ -24,5 +24,17 @@ export class UserController {
   @Get(':id')
   findOne(@Param('id') id: string, @Req() req: any) {
     return this.userService.findOneByOrg(id, req.user.orgId);
+  }
+
+  @Roles('admin')
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @Req() req: any) {
+    return this.userService.updateForOrg(id, req.user.orgId, dto);
+  }
+
+  @Roles('admin')
+  @Delete(':id')
+  delete(@Param('id') id: string, @Req() req: any) {
+    return this.userService.deleteForOrg(id, req.user.orgId);
   }
 }

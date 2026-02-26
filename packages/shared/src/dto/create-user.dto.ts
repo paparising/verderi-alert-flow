@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, MinLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsNotEmpty()
@@ -13,6 +13,10 @@ export class CreateUserDto {
   @IsNotEmpty()
   phone: string;
 
-  @IsUUID()
-  organizationId: string;
+  @IsNotEmpty()
+  @MinLength(8)
+  password: string;
+
+  @IsOptional()
+  role?: 'user' | 'admin';
 }

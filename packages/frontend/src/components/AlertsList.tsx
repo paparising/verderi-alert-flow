@@ -200,13 +200,6 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
   };
 
   const startEdit = (alert: Alert) => {
-    if (selectedAlert?.id === alert.id) {
-      setSelectedAlert(null);
-      setEditForm(null);
-      setActionError(null);
-      setActionMessage(null);
-      return;
-    }
     setSelectedAlert(alert);
     setEditForm({ alertContext: alert.alertContext, status: alert.status as EditableStatus });
     setActionError(null);
@@ -255,6 +248,7 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
       setSelectedAlert((prev) => (prev?.id === updated.id ? updated : prev));
       setDetailAlert((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
       setActionMessage('Alert updated');
+      cancelEdit();
     } catch (err: any) {
       setActionError(err?.message || 'Error updating alert');
     } finally {
@@ -394,14 +388,14 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
                     <button
                       className="btn-primary"
                       onClick={(e) => { e.stopPropagation(); startEdit(alert); }}
-                      disabled={actionLoading && isEditing}
+                      disabled={normalizeStatus(alert.status) === 'resolved' || actionLoading}
                     >
-                      {isEditing ? 'Hide' : 'Edit'}
+                      Edit
                     </button>
                     <button
                       className="btn-danger"
                       onClick={(e) => { e.stopPropagation(); handleDeleteAlert(alert); }}
-                      disabled={normalizeStatus(alert.status) !== 'resolved' || (actionLoading && isEditing)}
+                      disabled={normalizeStatus(alert.status) !== 'resolved' || actionLoading}
                     >
                       Delete
                     </button>

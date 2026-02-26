@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, Organization, CreateUserDto, CreateAdminUserDto } from '@vederi/shared';
+import { User, Organization, CreateUserDto, CreateAdminUserDto, UpdateUserDto } from '@vederi/shared';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -18,14 +18,27 @@ export class UserService {
     if (!org) {
       throw new ForbiddenException('Organization not found');
     }
+    
+    // Check email uniqueness within this organization
+    const existing = await this.userRepo.findOne({ where: { email: dto.email, organization: { id: orgId } } });
+    if (existing) {
+      throw new ConflictException('User with this email already exists in this organization');
+    }
+    
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
     const user = this.userRepo.create({
       name: dto.name,
       address: dto.address,
       email: dto.email,
       phone: dto.phone,
+      role: dto.role || 'user',
       organization: org,
+      passwordHash,
     });
-    return this.userRepo.save(user);
+    const saved = await this.userRepo.save(user);
+    delete (saved as any).passwordHash;
+    return saved;
   }
 
   async createAdminForOrg(dto: CreateAdminUserDto) {
@@ -34,9 +47,10 @@ export class UserService {
       throw new ForbiddenException('Organization not found');
     }
 
-    const existing = await this.userRepo.findOne({ where: { email: dto.email } });
+    // Check email uniqueness within this organization
+    const existing = await this.userRepo.findOne({ where: { email: dto.email, organization: { id: dto.organizationId } } });
     if (existing) {
-      throw new ConflictException('User with this email already exists');
+      throw new ConflictException('User with this email already exists in this organization');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -75,5 +89,41 @@ export class UserService {
       throw new ForbiddenException('User not found in this organization');
     }
     return user;
+  }
+
+  async updateForOrg(id: string, orgId: string, dto: UpdateUserDto) {
+    const user = await this.findOneByOrg(id, orgId);
+    
+    // Ensure organization cannot be changed
+    if ((dto as any).organizationId || (dto as any).organization) {
+      throw new ForbiddenException('Organization cannot be modified');
+    }
+    
+    if (dto.email && dto.email !== user.email) {
+      // Check email uniqueness within this organization
+      const existing = await this.userRepo.findOne({ where: { email: dto.email, organization: { id: orgId } } });
+      if (existing) {
+        throw new ConflictException('User with this email already exists in this organization');
+      }
+      user.email = dto.email;
+    }
+
+    if (dto.name) user.name = dto.name;
+    if (dto.address) user.address = dto.address;
+    if (dto.phone) user.phone = dto.phone;
+    if (dto.role) user.role = dto.role;
+
+    if (dto.password) {
+      user.passwordHash = await bcrypt.hash(dto.password, 10);
+    }
+    const saved = await this.userRepo.save(user);
+    delete (saved as any).passwordHash;
+    return saved;
+  }
+
+  async deleteForOrg(id: string, orgId: string) {
+    const user = await this.findOneByOrg(id, orgId);
+    await this.userRepo.delete(id);
+    return { success: true };
   }
 }

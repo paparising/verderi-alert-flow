@@ -236,6 +236,14 @@
   opacity: 0.9;
 }
 
+.alerts-container .btn-primary:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.9;
+}
+
 .alerts-container .btn-secondary {
   flex: 0 0 auto;
   padding: 8px 12px;

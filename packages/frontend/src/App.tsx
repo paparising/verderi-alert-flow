@@ -29,6 +29,15 @@ interface OrgUser {
   createdAt?: string;
 }
 
+interface UserFormState {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  role: 'user' | 'admin';
+  password: string;
+}
+
 const DEFAULT_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 const decodeJwt = (token: string) => {
@@ -64,6 +73,11 @@ function App() {
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [userForm, setUserForm] = useState<UserFormState>({ name: '', email: '', phone: '', address: '', role: 'user', password: '' });
+  const [userFormMessage, setUserFormMessage] = useState<string | null>(null);
+  const [userFormLoading, setUserFormLoading] = useState(false);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editUserForm, setEditUserForm] = useState<UserFormState | null>(null);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -180,6 +194,106 @@ function App() {
       setUsers([]);
     } finally {
       setUsersLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!session) return;
+
+    setUserFormLoading(true);
+    setUserFormMessage(null);
+
+    const base = DEFAULT_API_URL.replace(/\/$/, '');
+    try {
+      const res = await fetch(`${base}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify(userForm),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to create user');
+      }
+
+      setUserFormMessage('User created successfully');
+      setUserForm({ name: '', email: '', phone: '', address: '', role: 'user', password: '' });
+      await loadUsers(session.token, session.orgId);
+    } catch (err: any) {
+      setUserFormMessage(err?.message || 'Error creating user');
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  const handleUpdateUser = async (userId: string) => {
+    if (!session || !editUserForm) return;
+
+    setUserFormLoading(true);
+    setUserFormMessage(null);
+
+    const base = DEFAULT_API_URL.replace(/\/$/, '');
+    try {
+      const { password, ...rest } = editUserForm;
+      const body = password ? { ...rest, password } : rest;
+      const res = await fetch(`${base}/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || 'Failed to update user');
+      }
+
+      setUserFormMessage('User updated successfully');
+      setEditingUserId(null);
+      setEditUserForm(null);
+      await loadUsers(session.token, session.orgId);
+    } catch (err: any) {
+      setUserFormMessage(err?.message || 'Error updating user');
+    } finally {
+      setUserFormLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!session) return;
+
+    const confirmed = window.confirm('Delete this user? This cannot be undone.');
+    if (!confirmed) return;
+
+    setUserFormLoading(true);
+    setUserFormMessage(null);
+
+    const base = DEFAULT_API_URL.replace(/\/$/, '');
+    try {
+      const res = await fetch(`${base}/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${session.token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as any)?.message || 'Failed to delete user');
+      }
+
+      setUserFormMessage('User deleted successfully');
+      await loadUsers(session.token, session.orgId);
+    } catch (err: any) {
+      setUserFormMessage(err?.message || 'Error deleting user');
+    } finally {
+      setUserFormLoading(false);
     }
   };
 
@@ -314,53 +428,257 @@ function App() {
               )}
 
               {activeTab === 'users' && (session.role === 'admin' || session.role === 'superadmin') && (
-                <div className="card">
-                  <div className="card-header">
-                    <div>
-                      <p className="eyebrow">Org users</p>
-                      <h3>Manage users in this organization</h3>
-                      <p className="muted">Read-only list for now. Add/edit flows can be wired next.</p>
+                <>
+                  <div className="card">
+                    <div className="card-header">
+                      <div>
+                        <p className="eyebrow">Org users</p>
+                        <h3>Manage users in this organization</h3>
+                      </div>
+                      <div className="role-chip" data-role={session.role}>
+                        <span className="dot" /> {session.role}
+                      </div>
                     </div>
-                    <div className="role-chip" data-role={session.role}>
-                      <span className="dot" /> {session.role}
-                    </div>
+
+                    {usersLoading && <div className="inline-message">Loading users…</div>}
+                    {usersError && <div className="inline-message error">{usersError}</div>}
+
+                    {!usersLoading && !usersError && (
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Role</th>
+                              <th>Phone</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {users.length === 0 && (
+                              <tr>
+                                <td colSpan={5} className="muted">No users found.</td>
+                              </tr>
+                            )}
+                            {users.map((u) => (
+                              <tr key={u.id}>
+                                <td>{u.name || '—'}</td>
+                                <td>{u.email || '—'}</td>
+                                <td><span className="pill muted-pill">{u.role || 'user'}</span></td>
+                                <td>{u.phone || '—'}</td>
+                                <td>
+                                  <button
+                                    className="btn-primary"
+                                    onClick={() => {
+                                      setEditingUserId(u.id);
+                                      setEditUserForm({ name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', role: (u.role as 'user' | 'admin') || 'user', password: '' });
+                                    }}
+                                    disabled={userFormLoading}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="btn-danger"
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    disabled={userFormLoading}
+                                    style={{ marginLeft: '0.5rem' }}
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
 
-                  {usersLoading && <div className="inline-message">Loading users…</div>}
-                  {usersError && <div className="inline-message error">{usersError}</div>}
+                  {editingUserId && editUserForm && (
+                    <div className="card">
+                      <div className="card-header">
+                        <div>
+                          <p className="eyebrow">Edit User</p>
+                          <h3>Update user details</h3>
+                        </div>
+                      </div>
 
-                  {!usersLoading && !usersError && (
-                    <div className="table-wrapper">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Phone</th>
-                            <th>Created</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {users.length === 0 && (
-                            <tr>
-                              <td colSpan={5} className="muted">No users found.</td>
-                            </tr>
-                          )}
-                          {users.map((u) => (
-                            <tr key={u.id}>
-                              <td>{u.name || '—'}</td>
-                              <td>{u.email || '—'}</td>
-                              <td><span className="pill muted-pill">{u.role || 'user'}</span></td>
-                              <td>{u.phone || '—'}</td>
-                              <td>{u.createdAt ? new Date(u.createdAt).toLocaleString() : '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      {userFormMessage && <div className="inline-message">{userFormMessage}</div>}
+
+                      <form onSubmit={(e) => { e.preventDefault(); handleUpdateUser(editingUserId); }}>
+                        <label className="field">
+                          <span>Name</span>
+                          <input
+                            type="text"
+                            value={editUserForm.name}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
+                            required
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Email</span>
+                          <input
+                            type="email"
+                            value={editUserForm.email}
+                            disabled
+                            required
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Phone</span>
+                          <input
+                            type="tel"
+                            value={editUserForm.phone}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
+                            required
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Address</span>
+                          <input
+                            type="text"
+                            value={editUserForm.address}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, address: e.target.value })}
+                            required
+                          />
+                        </label>
+
+                        <label className="field">
+                          <span>Role</span>
+                          <select
+                            value={editUserForm.role}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value as 'user' | 'admin' })}
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </label>
+
+                        <label className="field">
+                          <span>New password (leave blank to keep)</span>
+                          <input
+                            type="password"
+                            value={editUserForm.password}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                            placeholder="Min 8 characters"
+                            minLength={8}
+                          />
+                        </label>
+
+                        <div className="form-actions">
+                          <button type="submit" className="btn-primary" disabled={userFormLoading}>
+                            {userFormLoading ? 'Saving…' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => {
+                              setEditingUserId(null);
+                              setEditUserForm(null);
+                            }}
+                            disabled={userFormLoading}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
                     </div>
                   )}
-                </div>
+
+                  <div className="card">
+                    <div className="card-header">
+                      <div>
+                        <p className="eyebrow">Create New User</p>
+                      </div>
+                    </div>
+
+                    {userFormMessage && !editingUserId && <div className="inline-message">{userFormMessage}</div>}
+
+                    <form className="alert-form" onSubmit={handleCreateUser}>
+                      <label className="field">
+                        <span>Name</span>
+                        <input
+                          type="text"
+                          value={userForm.name}
+                          onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                          placeholder="John Doe"
+                          required
+                        />
+                      </label>
+
+                      <label className="field">
+                        <span>Email</span>
+                        <input
+                          type="email"
+                          value={userForm.email}
+                          onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                          placeholder="john@example.com"
+                          required
+                        />
+                      </label>
+
+                      <label className="field">
+                        <span>Phone</span>
+                        <input
+                          type="tel"
+                          value={userForm.phone}
+                          onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                          placeholder="+1234567890"
+                          required
+                        />
+                      </label>
+
+                      <label className="field">
+                        <span>Address</span>
+                        <input
+                          type="text"
+                          value={userForm.address}
+                          onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
+                          placeholder="123 Main St"
+                          required
+                        />
+                      </label>
+
+                      <label className="field">
+                        <span>Role</span>
+                        <select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value as 'user' | 'admin' })}>
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </label>
+
+                      <label className="field">
+                        <span>Password</span>
+                        <input
+                          type="password"
+                          value={userForm.password}
+                          onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                          placeholder="Min 8 characters"
+                          required
+                          minLength={8}
+                        />
+                      </label>
+
+                      <div className="form-actions">
+                        <button type="submit" className="btn-primary" disabled={userFormLoading}>
+                          {userFormLoading ? 'Creating…' : 'Create user'}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => setUserForm({ name: '', email: '', phone: '', address: '', role: 'user', password: '' })}
+                          disabled={userFormLoading}
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </>
               )}
             </>
           )}

@@ -328,6 +328,15 @@
   background: white;
 }
 
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
 .field textarea {
   min-height: 120px;
   resize: vertical;
@@ -442,36 +451,50 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
 
-  .table-wrapper {
-    overflow-x: auto;
-  }
+.table-wrapper {
+  overflow-x: auto;
+}
 
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-  }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
 
-  .data-table th,
-  .data-table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #e5e7eb;
-    color: #1f2937;
-  }
+.data-table th,
+.data-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
 
-  .data-table th {
-    background: #f8fafc;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #4b5563;
-  }
+.data-table th {
+  background: #f8fafc;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #4b5563;
+  font-weight: 600;
+}
 
-  .data-table tr:hover td {
-    background: #f8fafc;
-  }
+.data-table tr:hover td {
+  background: #f8fafc;
+}
+
+.pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.muted-pill {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .modal-header {
@@ -557,6 +580,10 @@
   margin-top: 2rem;
 }
 
+.form-actions button {
+  flex: 1;
+}
+
 .btn-secondary {
   flex: 1;
   background: #f3f4f6;
@@ -571,6 +598,42 @@
 
 .btn-secondary:hover {
   background: #e5e7eb;
+}
+
+.btn-secondary:disabled {
+  background: #f3f4f6;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.28);
+  filter: brightness(1.05);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .user-form .btn-primary {

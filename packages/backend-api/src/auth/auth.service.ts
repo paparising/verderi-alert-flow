@@ -26,10 +26,20 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.validateUser(dto.email, dto.password);
+    const user = await this.users.findByEmailWithPassword(dto.email);
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const ok = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     const payload = {
       sub: user.id,
       orgId: user.organization.id,
+      email: user.email,
       roles: [user.role || 'user'],
     };
     const accessToken = await this.jwt.signAsync(payload);

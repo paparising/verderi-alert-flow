@@ -1,5 +1,6 @@
 export * from './create-organization.dto';
 export * from './create-user.dto';
+export * from './update-user.dto';
 export * from './create-alert.dto';
 export * from './update-alert-status.dto';
 export * from './update-alert.dto';

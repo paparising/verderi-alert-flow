@@ -11,6 +11,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
   
   const port = process.env.PORT || 3000;
+
   await app.listen(port);
   const logger = new Logger('Bootstrap');
   logger.log(`[API Service] Application is running on: http://localhost:${port}`);
