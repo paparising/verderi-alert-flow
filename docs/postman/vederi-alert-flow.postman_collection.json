@@ -13,7 +13,8 @@
     { "key": "alertId", "value": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
     { "key": "userId", "value": "99999999-8888-7777-6666-555555555555" },
     { "key": "jwtAdmin", "value": "" },
-    { "key": "jwtUser", "value": "" }
+    { "key": "jwtUser", "value": "" },
+    { "key": "jwtSuperadmin", "value": "", "description": "JWT token for superadmin user (role: superadmin)" }
   ],
   "item": [
     {
@@ -109,6 +110,22 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Org User\",\n  \"address\": \"123 Main St\",\n  \"email\": \"user1@example.com\",\n  \"phone\": \"555-9999\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"admin\"\n}"
+            },
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "Create User for Different Org (superadmin)",
+          "description": "Superadmin can create users for any organization by specifying organizationId in the request body",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtSuperadmin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cross-Org User\",\n  \"address\": \"456 Oak Ave\",\n  \"email\": \"crossorg@example.com\",\n  \"phone\": \"555-1234\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"admin\",\n  \"organizationId\": \"{{orgId}}\"\n}"
             },
             "url": "{{baseUrl}}/users"
           }

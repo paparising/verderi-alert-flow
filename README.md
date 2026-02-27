@@ -64,6 +64,7 @@ Tests: `npm test` (root) or per workspace (`npm run test --workspace=frontend --
 - Superadmin-only org management: headers `x-superuser` and `x-api-key` on `/organizations` endpoints.
 - Auth: `POST /auth/login` with `email`, `password` → JWT.
 - Admin-only user management: `/users` CRUD; `password` required on create, optional on update. Role defaults to `user` if omitted.
+- **Superadmin cross-org user creation**: Superadmins (role: `superadmin`) can create users for any organization by including `organizationId` in the request body when calling `POST /users`.
 - Alerts (admin/user): create/list/update/delete via `/alerts`; status values: `New`, `Acknowledged`, `Resolved`. Alert events history at `/alerts/{id}/events`.
 
 Roles are enforced via JWT claims; org scoping is derived from the token (`orgId`, `userId`).

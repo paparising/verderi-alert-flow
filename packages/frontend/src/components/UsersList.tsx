@@ -1,16 +1,8 @@
 import React from 'react';
+import { Role, OrgUser } from '../types';
 
-export type Role = 'superadmin' | 'admin' | 'user';
-
-export interface OrgUser {
-  id: string;
-  name?: string;
-  email?: string;
-  role?: string;
-  address?: string;
-  phone?: string;
-  createdAt?: string;
-}
+// Re-export for backwards compatibility
+export type { Role, OrgUser };
 
 interface UsersListProps {
   users: OrgUser[];

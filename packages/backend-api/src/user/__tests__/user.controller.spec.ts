@@ -60,11 +60,71 @@ describe('UserController', () => {
         password: 'strong-pass',
       };
 
-      const req = { user: { orgId: 'org-123' } };
+      const req = { user: { orgId: 'org-123', roles: ['admin'] } };
       service.createForOrg.mockResolvedValue(mockUser as any);
 
       const result = await controller.create(createDto, req);
 
+      expect(service.createForOrg).toHaveBeenCalledWith(createDto, 'org-123');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should allow superadmin to create user for a different org', async () => {
+      const createDto: CreateUserDto = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '1234567890',
+        address: '123 Main St',
+        role: 'admin',
+        password: 'strong-pass',
+        organizationId: 'org-456',
+      };
+
+      const req = { user: { orgId: 'org-123', roles: ['superadmin'] } };
+      service.createForOrg.mockResolvedValue(mockUser as any);
+
+      const result = await controller.create(createDto, req);
+
+      expect(service.createForOrg).toHaveBeenCalledWith(createDto, 'org-456');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should use own org if superadmin does not provide organizationId', async () => {
+      const createDto: CreateUserDto = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '1234567890',
+        address: '123 Main St',
+        role: 'user',
+        password: 'strong-pass',
+      };
+
+      const req = { user: { orgId: 'org-123', roles: ['superadmin'] } };
+      service.createForOrg.mockResolvedValue(mockUser as any);
+
+      const result = await controller.create(createDto, req);
+
+      expect(service.createForOrg).toHaveBeenCalledWith(createDto, 'org-123');
+      expect(result).toEqual(mockUser);
+    });
+
+    it('should ignore organizationId for non-superadmin users', async () => {
+      const createDto: CreateUserDto = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '1234567890',
+        address: '123 Main St',
+        role: 'user',
+        password: 'strong-pass',
+        organizationId: 'org-456',
+      };
+
+      const req = { user: { orgId: 'org-123', roles: ['admin'] } };
+      service.createForOrg.mockResolvedValue(mockUser as any);
+
+      const result = await controller.create(createDto, req);
+
+      // Should use admin's org, not the specified one
       expect(service.createForOrg).toHaveBeenCalledWith(createDto, 'org-123');
       expect(result).toEqual(mockUser);
     });
