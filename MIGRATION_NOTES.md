@@ -12,9 +12,9 @@ February 23, 2026
 
 The monolithic backend has been split into three independent microservices:
 
-1. **packages/backend-api/** - API Service (REST + WebSocket + Kafka Producer)
+1. **packages/backend-api/** - API Service (REST + Kafka Producer)
 2. **packages/backend-persistence/** - Persistence Service (Kafka Consumer → Database)
-3. **packages/backend-notification/** - Notification Service (Kafka Consumer → WebSocket)
+3. **packages/backend-notification/** - Notification Service (Kafka Consumer + WebSocket Server)
 
 All shared code moved to:
 

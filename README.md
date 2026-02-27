@@ -5,12 +5,12 @@ Event-driven alert management built with NestJS, React, Kafka, Postgres, and Web
 ## Architecture
 
 - **frontend** (`packages/frontend`): React + TypeScript served by Nginx.
-- **backend-api** (`packages/backend-api`): REST + WebSocket gateway, Kafka producer, auth/roles.
+- **backend-api** (`packages/backend-api`): REST API, Kafka producer, auth/roles.
 - **backend-persistence** (`packages/backend-persistence`): Kafka consumer that persists alert events to Postgres.
-- **backend-notification** (`packages/backend-notification`): Kafka consumer that emits WebSocket notifications.
+- **backend-notification** (`packages/backend-notification`): Kafka consumer + WebSocket server that emits real-time notifications.
 - **shared** (`packages/shared`): DTOs, entities, enums shared across services.
 
-Event flow: API writes/updates alerts → publishes to Kafka → persistence consumer stores history → notification consumer pushes real-time events. WebSockets also stream immediate alert changes from the API service.
+Event flow: API writes/updates alerts → publishes to Kafka → persistence consumer stores history → notification consumer pushes real-time events via WebSockets.
 
 ## Quickstart
 
@@ -26,6 +26,7 @@ Services:
 
 - Frontend: http://localhost
 - API: http://localhost:3001
+- WebSocket: http://localhost:3002
 - Postgres: localhost:5438 (inside compose: db:5432)
 - Kafka: localhost:9092 (inside compose: kafka:9092)
 
@@ -74,7 +75,7 @@ Roles are enforced via JWT claims; org scoping is derived from the token (`orgId
 - Topic: `alert-events`
 - Producer: backend-api
 - Consumers: backend-persistence (`alert-events-persistence-group`), backend-notification (`alert-events-notification-group`)
-- WebSocket gateway (Socket.IO) runs in backend-api and backend-notification; clients join org rooms and receive `newAlert`, `alertStatusUpdate`, `alertEvent`.
+- WebSocket gateway (Socket.IO) runs in backend-notification on port 3002; clients connect to this service, join org rooms, and receive `newAlert`, `alertStatusUpdate`, `alertEvent`.
 
 ## Project Structure
 
@@ -82,9 +83,9 @@ Roles are enforced via JWT claims; org scoping is derived from the token (`orgId
 vederi-alert-flow/
 ├─ packages/
 │  ├─ shared/                  # DTOs, entities, enums
-│  ├─ backend-api/             # REST + WS + Kafka producer (port 3001 external)
+│  ├─ backend-api/             # REST + Kafka producer (port 3001)
 │  ├─ backend-persistence/     # Kafka consumer → Postgres
-│  ├─ backend-notification/    # Kafka consumer → WebSocket
+│  ├─ backend-notification/    # Kafka consumer → WebSocket (port 3002)
 │  └─ frontend/                # React app (served by Nginx)
 ├─ docker-compose.yml
 ├─ docs/postman/vederi-alert-flow.postman_collection.json

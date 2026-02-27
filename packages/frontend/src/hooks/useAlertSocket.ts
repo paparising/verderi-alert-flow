@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const SOCKET_URL = process.env.REACT_APP_WS_URL || 'http://localhost:3002';
 
 export interface Alert {
   id: string;

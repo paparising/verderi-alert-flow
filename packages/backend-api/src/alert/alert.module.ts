@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AlertService } from './alert.service';
 import { AlertController } from './alert.controller';
-import { AlertGateway } from './alert.gateway';
 import { Alert, AlertEvent } from '@vederi/shared';
 import { KafkaModule } from '../kafka/kafka.module';
 import { AlertRetryInterceptor, CircuitBreakerService } from '../interceptors';
@@ -15,7 +14,6 @@ import { AlertRetryInterceptor, CircuitBreakerService } from '../interceptors';
   ],
   providers: [
     AlertService,
-    AlertGateway,
     CircuitBreakerService,
     {
       // Enhanced retry strategy specifically for alert operations
@@ -24,6 +22,6 @@ import { AlertRetryInterceptor, CircuitBreakerService } from '../interceptors';
     },
   ],
   controllers: [AlertController],
-  exports: [AlertService, AlertGateway],
+  exports: [AlertService],
 })
 export class AlertModule {}

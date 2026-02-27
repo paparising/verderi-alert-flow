@@ -3,14 +3,12 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AlertService } from '../alert.service';
 import { Alert, AlertEvent, AlertStatus } from '@vederi/shared';
-import { AlertGateway } from '../alert.gateway';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
 
 describe('AlertService', () => {
   let service: AlertService;
   let alertRepo: jest.Mocked<Repository<Alert>>;
   let alertEventRepo: jest.Mocked<Repository<AlertEvent>>;
-  let alertGateway: jest.Mocked<AlertGateway>;
   let kafkaProducer: jest.Mocked<KafkaProducerService>;
 
   const mockAlert: Partial<Alert> = {
@@ -43,11 +41,6 @@ describe('AlertService', () => {
       find: jest.fn(),
     };
 
-    const mockGateway = {
-      emitNewAlert: jest.fn(),
-      emitAlertStatusUpdate: jest.fn(),
-    };
-
     const mockKafka = {
       sendAlertEvent: jest.fn(),
     };
@@ -57,7 +50,6 @@ describe('AlertService', () => {
         AlertService,
         { provide: getRepositoryToken(Alert), useValue: mockAlertRepo },
         { provide: getRepositoryToken(AlertEvent), useValue: mockAlertEventRepo },
-        { provide: AlertGateway, useValue: mockGateway },
         { provide: KafkaProducerService, useValue: mockKafka },
       ],
     }).compile();
@@ -65,7 +57,6 @@ describe('AlertService', () => {
     service = module.get<AlertService>(AlertService);
     alertRepo = module.get(getRepositoryToken(Alert));
     alertEventRepo = module.get(getRepositoryToken(AlertEvent));
-    alertGateway = module.get(AlertGateway);
     kafkaProducer = module.get(KafkaProducerService);
   });
 
@@ -74,7 +65,7 @@ describe('AlertService', () => {
   });
 
   describe('createAlert', () => {
-    it('should create an alert and emit websocket event', async () => {
+    it('should create an alert and send event to Kafka', async () => {
       const createDto = {
         orgId: 'org-123',
         alertContext: 'Test alert',
@@ -82,12 +73,25 @@ describe('AlertService', () => {
       };
       alertRepo.create.mockReturnValue(mockAlert as Alert);
       alertRepo.save.mockResolvedValue(mockAlert as Alert);
+      kafkaProducer.sendAlertEvent.mockResolvedValue(undefined);
 
       const result = await service.createAlert(createDto);
 
       expect(alertRepo.create).toHaveBeenCalled();
       expect(alertRepo.save).toHaveBeenCalled();
-      expect(alertGateway.emitNewAlert).toHaveBeenCalledWith('org-123', mockAlert);
+      expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
+        'alert-events',
+        expect.objectContaining({
+          orgId: 'org-123',
+          alertId: mockAlert.id,
+          eventType: 'ALERT_CREATED',
+          eventData: expect.objectContaining({
+            alertId: mockAlert.id,
+            alertContext: mockAlert.alertContext,
+            status: mockAlert.status,
+          }),
+        }),
+      );
       expect(result).toEqual(mockAlert);
     });
   });
@@ -115,7 +119,7 @@ describe('AlertService', () => {
   });
 
   describe('updateAlertStatus', () => {
-    it('should update alert status and emit websocket event', async () => {
+    it('should update alert status and send event to Kafka', async () => {
       const updatedAlert = { ...mockAlert, status: AlertStatus.ACKNOWLEDGED, version: 2 };
       alertRepo.findOne.mockResolvedValue(mockAlert as Alert);
       alertRepo.save.mockResolvedValue(updatedAlert as Alert);
@@ -128,11 +132,16 @@ describe('AlertService', () => {
       expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
         'alert-events',
         expect.objectContaining({
+          orgId: 'org-123',
           alertId: 'alert-123',
-          eventData: expect.objectContaining({ alertId: 'alert-123' }),
+          eventType: 'ALERT_STATUS_CHANGED',
+          eventData: expect.objectContaining({
+            alertId: 'alert-123',
+            previousStatus: AlertStatus.NEW,
+            newStatus: AlertStatus.ACKNOWLEDGED,
+          }),
         }),
       );
-      expect(alertGateway.emitAlertStatusUpdate).toHaveBeenCalledWith('org-123', updatedAlert);
       expect(result.status).toBe(AlertStatus.ACKNOWLEDGED);
     });
 

@@ -18,11 +18,19 @@ import { parseLogLevels } from '@vederi/shared';
 class NotificationModule {}
 
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(NotificationModule, {
+  const app = await NestFactory.create(NotificationModule, {
     logger: parseLogLevels(process.env.LOG_LEVEL),
+    cors: {
+      origin: process.env.CORS_ORIGIN || '*',
+      credentials: true,
+    },
   });
-  await app.init();
+
+  const port = process.env.PORT || 3002;
+  await app.listen(port);
+  
   const logger = new Logger('NotificationBootstrap');
+  logger.log(`WebSocket server listening on port ${port}`);
   logger.log('Service started and listening to Kafka...');
 }
 

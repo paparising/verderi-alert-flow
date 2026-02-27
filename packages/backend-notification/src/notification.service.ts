@@ -64,9 +64,41 @@ export class EventNotificationService implements OnModuleInit, OnModuleDestroy {
       const eventData = JSON.parse(message.value?.toString() || '{}');
       console.log(`[Notification Service] Processing message from ${topic} [${partition}]:`, eventData.eventId);
 
-      // Emit WebSocket notification to connected clients
-      this.alertGateway.emitAlertEvent(eventData.orgId, eventData);
-      console.log(`[Notification Service] WebSocket notification sent for event: ${eventData.eventId}`);
+      // Route to appropriate WebSocket emission based on event type
+      switch (eventData.eventType) {
+        case 'ALERT_CREATED':
+          // For new alerts, construct full alert object from eventData
+          const newAlert = {
+            id: eventData.eventData.alertId,
+            alertContext: eventData.eventData.alertContext,
+            status: eventData.eventData.status,
+            createdAt: eventData.eventData.createdAt,
+            orgId: eventData.orgId,
+          };
+          this.alertGateway.emitNewAlert(eventData.orgId, newAlert);
+          console.log(`[Notification Service] New alert notification sent: ${eventData.eventId}`);
+          break;
+
+        case 'ALERT_STATUS_CHANGED':
+          // For status changes, emit status update with relevant data
+          const statusUpdate = {
+            id: eventData.eventData.alertId,
+            previousStatus: eventData.eventData.previousStatus,
+            status: eventData.eventData.newStatus,
+            changedAt: eventData.eventData.changedAt,
+          };
+          this.alertGateway.emitAlertStatusUpdate(eventData.orgId, statusUpdate);
+          console.log(`[Notification Service] Status update notification sent: ${eventData.eventId}`);
+          break;
+
+        case 'ALERT_CONTEXT_CHANGED':
+        case 'ALERT_EVENT_CREATED':
+        default:
+          // For context changes and generic events, use generic emitter
+          this.alertGateway.emitAlertEvent(eventData.orgId, eventData);
+          console.log(`[Notification Service] Generic event notification sent: ${eventData.eventId}`);
+          break;
+      }
     } catch (error) {
       console.error('[Notification Service] Error processing Kafka message:', error);
       // In production, send to dead-letter queue

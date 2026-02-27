@@ -2,7 +2,6 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Alert, AlertEvent, CreateAlertDto, CreateAlertEventDto, AlertStatus, UpdateAlertDto } from '@vederi/shared';
-import { AlertGateway } from './alert.gateway';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,7 +12,6 @@ export class AlertService {
     private alertRepo: Repository<Alert>,
     @InjectRepository(AlertEvent)
     private alertEventRepo: Repository<AlertEvent>,
-    private alertGateway: AlertGateway,
     private kafkaProducer: KafkaProducerService,
   ) {}
 
@@ -27,8 +25,21 @@ export class AlertService {
     });
     const savedAlert = await this.alertRepo.save(alert);
     
-    // Emit WebSocket event for new alert
-    this.alertGateway.emitNewAlert(dto.orgId, savedAlert);
+    // Send new alert event to Kafka - backend-notification will handle WebSocket emission
+    const eventData = {
+      orgId: dto.orgId,
+      alertId: savedAlert.id,
+      eventId: uuidv4(),
+      eventType: 'ALERT_CREATED',
+      eventData: {
+        alertId: savedAlert.id,
+        alertContext: savedAlert.alertContext,
+        status: savedAlert.status,
+        createdAt: savedAlert.createdAt.toISOString(),
+      },
+      createdBy: dto.createdBy,
+    };
+    await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
     
     return savedAlert;
   }
@@ -70,6 +81,7 @@ export class AlertService {
       orgId,
       alertId: alert.id,
       eventId: uuidv4(),
+      eventType: 'ALERT_STATUS_CHANGED',
       eventData: {
         alertId: alert.id,
         previousStatus,
@@ -81,9 +93,6 @@ export class AlertService {
 
     await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
 
-    // Emit WebSocket for alert status update (real-time)
-    this.alertGateway.emitAlertStatusUpdate(orgId, updatedAlert);
-
     return updatedAlert;
   }
 
@@ -93,6 +102,7 @@ export class AlertService {
       orgId: dto.orgId,
       alertId: dto.alertId,
       eventId: uuidv4(),
+      eventType: 'ALERT_EVENT_CREATED',
       eventData: dto.eventData,
       createdBy: dto.createdBy,
     };
@@ -135,6 +145,7 @@ export class AlertService {
         orgId,
         alertId: alert.id,
         eventId: uuidv4(),
+        eventType: 'ALERT_STATUS_CHANGED',
         eventData: {
           alertId: alert.id,
           previousStatus,
@@ -144,10 +155,21 @@ export class AlertService {
         createdBy: updatedBy,
       };
       await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
-      this.alertGateway.emitAlertStatusUpdate(orgId, updatedAlert);
     } else if (contextChanged) {
-      // emit updated alert so clients can refresh content
-      this.alertGateway.emitAlertStatusUpdate(orgId, updatedAlert);
+      // Send context change event to Kafka for WebSocket notification
+      const contextEventData = {
+        orgId,
+        alertId: alert.id,
+        eventId: uuidv4(),
+        eventType: 'ALERT_CONTEXT_CHANGED',
+        eventData: {
+          alertId: alert.id,
+          alertContext: alert.alertContext,
+          changedAt: new Date().toISOString(),
+        },
+        createdBy: updatedBy,
+      };
+      await this.kafkaProducer.sendAlertEvent('alert-events', contextEventData);
     }
 
     return updatedAlert;

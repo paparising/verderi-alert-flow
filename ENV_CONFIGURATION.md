@@ -109,12 +109,12 @@ LOG_LEVEL=info
 
 ## Quick Reference
 
-| Service      | Dev Port | Prod Port | Database      | Kafka        |
-| ------------ | -------- | --------- | ------------- | ------------ |
-| API          | 3001     | 3000      | ✅ Read/Write | ✅ Producer  |
-| Persistence  | -        | -         | ✅ Write Only | ✅ Consumer  |
-| Notification | -        | -         | ❌ No Access  | ✅ Consumer  |
-| Frontend     | 3000     | 80        | ❌ No Access  | ❌ No Access |
+| Service      | Dev Port | Prod Port | Database      | Kafka        | WebSocket |
+| ------------ | -------- | --------- | ------------- | ------------ | --------- |
+| API          | 3001     | 3000      | ✅ Read/Write | ✅ Producer  | ❌ No     |
+| Persistence  | -        | -         | ✅ Write Only | ✅ Consumer  | ❌ No     |
+| Notification | 3002     | 3002      | ❌ No Access  | ✅ Consumer  | ✅ Server |
+| Frontend     | 3000     | 80        | ❌ No Access  | ❌ No Access | ❌ No     |
 
 ---
 

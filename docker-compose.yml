@@ -99,7 +99,11 @@ services:
     env_file:
       - .env.dev
     environment:
+      PORT: 3002
       KAFKA_BROKER: kafka:9092
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+    ports:
+      - "3002:3002"
     depends_on:
       kafka:
         condition: service_healthy
@@ -111,10 +115,12 @@ services:
       dockerfile: Dockerfile
       args:
         REACT_APP_API_URL: http://localhost:3001
+        REACT_APP_WS_URL: http://localhost:3002
     ports:
       - "80:80"
     depends_on:
       - backend-api
+      - backend-notification
 
 volumes:
   db_data:

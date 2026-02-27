@@ -47,11 +47,17 @@ describe('EventNotificationService', () => {
   });
 
   describe('handleMessage', () => {
-    it('should emit alert event via websocket', async () => {
+    it('should route ALERT_CREATED to emitNewAlert', async () => {
       const eventData = {
         orgId: 'org-123',
         eventId: 'event-456',
-        eventData: { type: 'alert_created', alertId: 'alert-789' },
+        eventType: 'ALERT_CREATED',
+        eventData: {
+          alertId: 'alert-789',
+          alertContext: 'Test alert',
+          status: 'New',
+          createdAt: '2026-02-27T00:00:00.000Z',
+        },
         createdBy: 'user-001',
       };
 
@@ -63,7 +69,99 @@ describe('EventNotificationService', () => {
         },
       };
 
-      // Call private method via reflection
+      await (service as any).handleMessage(mockPayload);
+
+      expect(mockAlertGateway.emitNewAlert).toHaveBeenCalledWith(
+        'org-123',
+        expect.objectContaining({
+          id: 'alert-789',
+          alertContext: 'Test alert',
+          status: 'New',
+          orgId: 'org-123',
+        }),
+      );
+    });
+
+    it('should route ALERT_STATUS_CHANGED to emitAlertStatusUpdate', async () => {
+      const eventData = {
+        orgId: 'org-123',
+        eventId: 'event-456',
+        eventType: 'ALERT_STATUS_CHANGED',
+        eventData: {
+          alertId: 'alert-789',
+          previousStatus: 'New',
+          newStatus: 'Acknowledged',
+          changedAt: '2026-02-27T00:00:00.000Z',
+        },
+        createdBy: 'user-001',
+      };
+
+      const mockPayload = {
+        topic: 'alert-events',
+        partition: 0,
+        message: {
+          value: Buffer.from(JSON.stringify(eventData)),
+        },
+      };
+
+      await (service as any).handleMessage(mockPayload);
+
+      expect(mockAlertGateway.emitAlertStatusUpdate).toHaveBeenCalledWith(
+        'org-123',
+        expect.objectContaining({
+          id: 'alert-789',
+          previousStatus: 'New',
+          status: 'Acknowledged',
+        }),
+      );
+    });
+
+    it('should route ALERT_CONTEXT_CHANGED to emitAlertEvent', async () => {
+      const eventData = {
+        orgId: 'org-123',
+        eventId: 'event-456',
+        eventType: 'ALERT_CONTEXT_CHANGED',
+        eventData: {
+          alertId: 'alert-789',
+          alertContext: 'Updated context',
+          changedAt: '2026-02-27T00:00:00.000Z',
+        },
+        createdBy: 'user-001',
+      };
+
+      const mockPayload = {
+        topic: 'alert-events',
+        partition: 0,
+        message: {
+          value: Buffer.from(JSON.stringify(eventData)),
+        },
+      };
+
+      await (service as any).handleMessage(mockPayload);
+
+      expect(mockAlertGateway.emitAlertEvent).toHaveBeenCalledWith(
+        'org-123',
+        eventData,
+      );
+    });
+
+    it('should route unknown event types to emitAlertEvent', async () => {
+      const eventData = {
+        orgId: 'org-123',
+        eventId: 'event-456',
+        eventType: 'CUSTOM_EVENT',
+        eventData: { type: 'custom', alertId: 'alert-789' },
+        createdBy: 'user-001',
+      };
+
+      const mockPayload = {
+        topic: 'alert-events',
+        partition: 0,
+        message: {
+          value: Buffer.from(JSON.stringify(eventData)),
+        },
+      };
+
       await (service as any).handleMessage(mockPayload);
 
       expect(mockAlertGateway.emitAlertEvent).toHaveBeenCalledWith(
