@@ -17,8 +17,8 @@ import { UserModule } from '../user/user.module';
         secret: config.get<string>('JWT_SECRET', 'change-me-in-env'),
         signOptions: {
           expiresIn: config.get<StringValue>('JWT_EXPIRES_IN', '1h'),
-          issuer: config.get<string>('JWT_ISSUER', 'vederi-alert-flow'),
-          audience: config.get<string>('JWT_AUDIENCE', 'vederi-alert-flow-clients'),
+          issuer: config.get<string>('JWT_ISSUER', 'videri-alert-flow'),
+          audience: config.get<string>('JWT_AUDIENCE', 'videri-alert-flow-clients'),
         },
       }),
     }),

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserService } from '../user.service';
-import { User, Organization, CreateUserDto, UpdateUserDto } from '@vederi/shared';
+import { User, Organization, CreateUserDto, UpdateUserDto } from '@videri/shared';
 import { ForbiddenException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 

@@ -4,7 +4,7 @@ import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventNotificationService } from './notification.service';
 import { AlertGateway } from './alert.gateway';
-import { parseLogLevels } from '@vederi/shared';
+import { parseLogLevels } from '@videri/shared';
 
 @Module({
   imports: [

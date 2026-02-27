@@ -17,8 +17,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: configService.get<string>('JWT_SECRET', 'change-me-in-env'),
-      issuer: configService.get<string>('JWT_ISSUER', 'vederi-alert-flow'),
-      audience: configService.get<string>('JWT_AUDIENCE', 'vederi-alert-flow-clients'),
+      issuer: configService.get<string>('JWT_ISSUER', 'videri-alert-flow'),
+      audience: configService.get<string>('JWT_AUDIENCE', 'videri-alert-flow-clients'),
     });
   }
 

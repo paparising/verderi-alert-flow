@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AlertService } from '../alert.service';
-import { Alert, AlertEvent, AlertStatus } from '@vederi/shared';
+import { Alert, AlertEvent, AlertStatus } from '@videri/shared';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
 
 describe('AlertService', () => {

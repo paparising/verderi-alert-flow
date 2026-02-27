@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User, Organization, CreateUserDto, CreateAdminUserDto, UpdateUserDto } from '@vederi/shared';
+import { User, Organization, CreateUserDto, CreateAdminUserDto, UpdateUserDto } from '@videri/shared';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()

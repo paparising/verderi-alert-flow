@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Patch, Delete, Req, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto, UpdateUserDto } from '@vederi/shared';
+import { CreateUserDto, UpdateUserDto } from '@videri/shared';
 import { Roles } from '../decorators';
 import { Role } from '../decorators/roles.decorator';
 

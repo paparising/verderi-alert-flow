@@ -11,8 +11,8 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@vederi/shared": ["../shared/dist"],
-      "@vederi/shared/*": ["../shared/dist/*"]
+      "@videri/shared": ["../shared/dist"],
+      "@videri/shared/*": ["../shared/dist/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

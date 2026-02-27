@@ -11,11 +11,11 @@ import { AlertModule } from './alert/alert.module';
 import { RedisModule } from './redis/redis.module';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import { RateLimitHeadersInterceptor, CircuitBreakerService, RetryInterceptor } from './interceptors';
-import { Organization, User, Alert, AlertEvent, ProcessedEvent } from '@vederi/shared';
+import { Organization, User, Alert, AlertEvent, ProcessedEvent } from '@videri/shared';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RolesGuard } from './guards';
-import { HttpExceptionFilter } from '@vederi/shared';
+import { HttpExceptionFilter } from '@videri/shared';
 
 @Module({
   imports: [
@@ -29,7 +29,7 @@ import { HttpExceptionFilter } from '@vederi/shared';
       port: parseInt(process.env.DB_PORT || '5432', 10),
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASS || 'password',
-      database: process.env.DB_NAME || 'vederi',
+      database: process.env.DB_NAME || 'videri',
       entities: [Organization, User, Alert, AlertEvent, ProcessedEvent],
       synchronize: true,
     }),

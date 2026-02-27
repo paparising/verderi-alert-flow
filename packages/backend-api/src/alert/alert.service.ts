@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Alert, AlertEvent, CreateAlertDto, CreateAlertEventDto, AlertStatus, UpdateAlertDto } from '@vederi/shared';
+import { Alert, AlertEvent, CreateAlertDto, CreateAlertEventDto, AlertStatus, UpdateAlertDto } from '@videri/shared';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { v4 as uuidv4 } from 'uuid';
 

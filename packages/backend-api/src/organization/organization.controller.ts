@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
-import { CreateOrganizationDto } from '@vederi/shared';
+import { CreateOrganizationDto } from '@videri/shared';
 import { Public } from '../decorators';
 import { SuperAdminGuard } from '../guards';
 

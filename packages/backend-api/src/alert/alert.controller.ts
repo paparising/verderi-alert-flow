@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { AlertService } from './alert.service';
-import { CreateAlertDto, UpdateAlertDto, UpdateAlertStatusDto } from '@vederi/shared';
+import { CreateAlertDto, UpdateAlertDto, UpdateAlertStatusDto } from '@videri/shared';
 import { Roles } from '../decorators';
 
 @Controller('alerts')

@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { parseLogLevels } from '@vederi/shared';
+import { parseLogLevels } from '@videri/shared';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {

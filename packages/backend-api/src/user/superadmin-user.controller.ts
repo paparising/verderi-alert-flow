@@ -1,6 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateAdminUserDto } from '@vederi/shared';
+import { CreateAdminUserDto } from '@videri/shared';
 import { Public } from '../decorators/public.decorator';
 import { SuperAdminGuard } from '../guards';
 

@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { LoginDto } from '@vederi/shared';
+import { LoginDto } from '@videri/shared';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcryptjs';
 

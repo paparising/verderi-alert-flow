@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Organization, CreateOrganizationDto } from '@vederi/shared';
+import { Organization, CreateOrganizationDto } from '@videri/shared';
 
 @Injectable()
 export class OrganizationService {

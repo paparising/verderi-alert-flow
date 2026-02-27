@@ -132,7 +132,7 @@ function App() {
     <div className="App">
       <header className="app-header">
         <div className="header-content">
-          <h1>Vederi Alert Flow</h1>
+          <h1>Videri Alert Flow</h1>
           {session ? (
             <div className="session-badge">
               <span>{session.email || loginForm.email}</span>

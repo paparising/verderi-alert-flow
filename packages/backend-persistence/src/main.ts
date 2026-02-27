@@ -3,9 +3,9 @@ import { NestFactory } from '@nestjs/core';
 import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AlertEvent, Organization, User, Alert, ProcessedEvent } from '@vederi/shared';
+import { AlertEvent, Organization, User, Alert, ProcessedEvent } from '@videri/shared';
 import { EventPersistenceService } from './persistence.service';
-import { parseLogLevels } from '@vederi/shared';
+import { parseLogLevels } from '@videri/shared';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { parseLogLevels } from '@vederi/shared';
       port: parseInt(process.env.DB_PORT || '5432', 10),
       username: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASS || 'password',
-      database: process.env.DB_NAME || 'vederi',
+      database: process.env.DB_NAME || 'videri',
       entities: [Organization, User, Alert, AlertEvent, ProcessedEvent],
       synchronize: true,
     }),

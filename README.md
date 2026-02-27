@@ -1,4 +1,4 @@
-# Vederi Alert Flow
+# Videri Alert Flow
 
 Event-driven alert management built with NestJS, React, Kafka, Postgres, and WebSockets. This README now replaces the scattered Markdown docs; everything you need is here.
 
@@ -80,7 +80,7 @@ Roles are enforced via JWT claims; org scoping is derived from the token (`orgId
 ## Project Structure
 
 ```
-vederi-alert-flow/
+videri-alert-flow/
 ├─ packages/
 │  ├─ shared/                  # DTOs, entities, enums
 │  ├─ backend-api/             # REST + Kafka producer (port 3001)
@@ -88,7 +88,7 @@ vederi-alert-flow/
 │  ├─ backend-notification/    # Kafka consumer → WebSocket (port 3002)
 │  └─ frontend/                # React app (served by Nginx)
 ├─ docker-compose.yml
-├─ docs/postman/vederi-alert-flow.postman_collection.json
+├─ docs/postman/videri-alert-flow.postman_collection.json
 └─ README.md (this file)
 ```
 
@@ -101,7 +101,7 @@ vederi-alert-flow/
 
 ## Postman Collection
 
-Updated collection lives at `docs/postman/vederi-alert-flow.postman_collection.json` with environment variables for base URL, superadmin headers, JWTs, and sample payloads that include password fields for user create/update.
+Updated collection lives at `docs/postman/videri-alert-flow.postman_collection.json` with environment variables for base URL, superadmin headers, JWTs, and sample payloads that include password fields for user create/update.
 
 The collection includes:
 

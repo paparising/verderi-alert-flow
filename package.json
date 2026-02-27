@@ -1,26 +1,26 @@
 {
-  "name": "vederi-alert-flow",
+  "name": "videri-alert-flow",
   "version": "1.0.0",
-  "description": "Vederi Alert Flow Microservices",
+  "description": "Videri Alert Flow Microservices",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "install:all": "npm install && npm run install:packages",
-    "install:packages": "npm install --workspace=@vederi/shared && npm install --workspace=@vederi/backend-api && npm install --workspace=@vederi/backend-persistence && npm install --workspace=@vederi/backend-notification",
-    "build:shared": "npm run build --workspace=@vederi/shared",
-    "build:api:only": "npm run build --workspace=@vederi/backend-api",
-    "build:persistence:only": "npm run build --workspace=@vederi/backend-persistence",
-    "build:notification:only": "npm run build --workspace=@vederi/backend-notification",
+    "install:packages": "npm install --workspace=@videri/shared && npm install --workspace=@videri/backend-api && npm install --workspace=@videri/backend-persistence && npm install --workspace=@videri/backend-notification",
+    "build:shared": "npm run build --workspace=@videri/shared",
+    "build:api:only": "npm run build --workspace=@videri/backend-api",
+    "build:persistence:only": "npm run build --workspace=@videri/backend-persistence",
+    "build:notification:only": "npm run build --workspace=@videri/backend-notification",
     "build:api": "npm run build:shared && npm run build:api:only",
     "build:persistence": "npm run build:shared && npm run build:persistence:only",
     "build:notification": "npm run build:shared && npm run build:notification:only",
     "build:all": "npm run build:shared && npm run build:api:only && npm run build:persistence:only && npm run build:notification:only",
     "build": "npm run build:all",
-    "test:api": "npm run test --workspace=@vederi/backend-api",
-    "test:persistence": "npm run test --workspace=@vederi/backend-persistence",
-    "test:notification": "npm run test --workspace=@vederi/backend-notification",
+    "test:api": "npm run test --workspace=@videri/backend-api",
+    "test:persistence": "npm run test --workspace=@videri/backend-persistence",
+    "test:notification": "npm run test --workspace=@videri/backend-notification",
     "test:frontend": "npm run test --workspace=frontend",
     "test:all": "npm run test:api && npm run test:persistence && npm run test:notification",
     "test": "npm run test:all",
@@ -43,7 +43,7 @@
     "websockets",
     "react"
   ],
-  "author": "Vederi Team",
+  "author": "Videri Team",
   "license": "UNLICENSED",
   "devDependencies": {
     "prettier": "^3.4.2"

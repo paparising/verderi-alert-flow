@@ -7,7 +7,7 @@ module.exports = {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
   moduleNameMapper: {
-    '^@vederi/shared$': '<rootDir>/../shared/dist',
-    '^@vederi/shared/(.*)$': '<rootDir>/../shared/dist/$1',
+    '^@videri/shared$': '<rootDir>/../shared/dist',
+    '^@videri/shared/(.*)$': '<rootDir>/../shared/dist/$1',
   },
 };

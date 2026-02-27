@@ -13,7 +13,7 @@ export class EventNotificationService implements OnModuleInit, OnModuleDestroy {
     private alertGateway: AlertGateway,
   ) {
     this.kafka = new Kafka({
-      clientId: 'vederi-alert-flow-notification',
+      clientId: 'videri-alert-flow-notification',
       brokers: [this.configService.get<string>('KAFKA_BROKER', 'localhost:9092')],
       connectionTimeout: 10000,
       retry: {

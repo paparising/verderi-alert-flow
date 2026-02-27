@@ -23,7 +23,7 @@ describe('AppController', () => {
   describe('getHello', () => {
     it('should return hello message', () => {
       const result = controller.getHello();
-      expect(result).toBe('Vederi Alert Flow API Service');
+      expect(result).toBe('Videri Alert Flow API Service');
     });
   });
 

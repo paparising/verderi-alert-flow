@@ -1,7 +1,7 @@
 {
-  "name": "@vederi/shared",
+  "name": "@videri/shared",
   "version": "1.0.0",
-  "description": "Shared entities, DTOs, and enums for Vederi Alert Flow",
+  "description": "Shared entities, DTOs, and enums for Videri Alert Flow",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

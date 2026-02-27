@@ -1,7 +1,7 @@
 {
-  "name": "@vederi/backend-persistence",
+  "name": "@videri/backend-persistence",
   "version": "1.0.0",
-  "description": "Vederi Alert Flow Persistence Service",
+  "description": "Videri Alert Flow Persistence Service",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -18,7 +18,7 @@
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
-    "@vederi/shared": "file:../shared",
+    "@videri/shared": "file:../shared",
     "dotenv": "^10.0.0",
     "kafkajs": "^2.2.4",
     "pg": "^8.10.0",

@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from '@vederi/shared';
+import { LoginDto } from '@videri/shared';
 import { Public } from '../decorators/public.decorator';
 
 @Controller('auth')

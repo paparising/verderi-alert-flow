@@ -87,7 +87,7 @@ DB_HOST=localhost
 DB_PORT=5438
 DB_USER=postgres
 DB_PASS=password
-DB_NAME=vederi
+DB_NAME=videri
 KAFKA_BROKER=localhost:9092
 LOG_LEVEL=debug
 ```

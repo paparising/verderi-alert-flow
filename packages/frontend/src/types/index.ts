@@ -1,5 +1,5 @@
 /**
- * Shared types for the Vederi Alert Flow frontend
+ * Shared types for the Videri Alert Flow frontend
  */
 
 export type Role = 'superadmin' | 'admin' | 'user';

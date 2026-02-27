@@ -3,7 +3,7 @@ import { Kafka, Consumer, EachMessagePayload } from 'kafkajs';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@vederi/shared';
+import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@videri/shared';
 
 @Injectable()
 export class EventPersistenceService implements OnModuleInit, OnModuleDestroy {
@@ -18,7 +18,7 @@ export class EventPersistenceService implements OnModuleInit, OnModuleDestroy {
     private processedEventRepo: Repository<ProcessedEvent>,
   ) {
     this.kafka = new Kafka({
-      clientId: 'vederi-alert-flow-persistence',
+      clientId: 'videri-alert-flow-persistence',
       brokers: [this.configService.get<string>('KAFKA_BROKER', 'localhost:9092')],
       connectionTimeout: 10000,
       retry: {

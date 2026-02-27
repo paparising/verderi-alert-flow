@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventPersistenceService } from '../persistence.service';
-import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@vederi/shared';
+import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@videri/shared';
 
 describe('EventPersistenceService', () => {
   let service: EventPersistenceService;

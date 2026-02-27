@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AlertService } from './alert.service';
 import { AlertController } from './alert.controller';
-import { Alert, AlertEvent } from '@vederi/shared';
+import { Alert, AlertEvent } from '@videri/shared';
 import { KafkaModule } from '../kafka/kafka.module';
 import { AlertRetryInterceptor, CircuitBreakerService } from '../interceptors';
 

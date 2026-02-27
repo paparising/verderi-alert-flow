@@ -1,7 +1,7 @@
 {
-  "name": "@vederi/backend-notification",
+  "name": "@videri/backend-notification",
   "version": "1.0.0",
-  "description": "Vederi Alert Flow Notification Service",
+  "description": "Videri Alert Flow Notification Service",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -20,7 +20,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.14",
     "@nestjs/websockets": "^11.1.14",
-    "@vederi/shared": "file:../shared",
+    "@videri/shared": "file:../shared",
     "dotenv": "^10.0.0",
     "kafkajs": "^2.2.4",
     "reflect-metadata": "^0.2.2",

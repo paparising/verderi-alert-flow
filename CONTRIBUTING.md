@@ -1,4 +1,4 @@
-# Contributing to Vederi Alert Flow
+# Contributing to Videri Alert Flow
 
 Thank you for your interest in contributing!
 
@@ -7,8 +7,8 @@ Thank you for your interest in contributing!
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/your-username/vederi-alert-flow.git
-   cd vederi-alert-flow
+   git clone https://github.com/your-username/videri-alert-flow.git
+   cd videri-alert-flow
    ```
 3. **Create a feature branch**:
    ```bash

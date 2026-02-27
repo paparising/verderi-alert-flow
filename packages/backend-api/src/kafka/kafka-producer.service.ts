@@ -9,7 +9,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
 
   constructor(private configService: ConfigService) {
     this.kafka = new Kafka({
-      clientId: 'vederi-alert-flow-api',
+      clientId: 'videri-alert-flow-api',
       brokers: [this.configService.get<string>('KAFKA_BROKER', 'localhost:9092')],
       connectionTimeout: 10000,
       retry: {
