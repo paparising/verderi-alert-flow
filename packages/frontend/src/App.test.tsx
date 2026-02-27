@@ -42,9 +42,9 @@ describe('App', () => {
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
 
-    test('component renders with Vederi Alert Flow title', () => {
+    test('component renders with Videri Alert Flow title', () => {
       render(<App />);
-      const title = screen.queryByText(/Vederi/i) || screen.queryByText(/sign in/i);
+      const title = screen.queryByText(/Videri/i) || screen.queryByText(/sign in/i);
       expect(title).toBeInTheDocument();
     });
   });
