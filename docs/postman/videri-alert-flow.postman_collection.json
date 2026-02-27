@@ -1,27 +1,12 @@
 {
   "info": {
+    "_postman_id": "74e1cb88-6237-4e72-9d57-c932de5fa4e3",
     "name": "Videri Alert Flow API",
-    "_postman_id": "c9b3d06d-0000-4c00-8000-000000000001",
     "description": "API collection for superadmin org setup, admin user management, auth, alerts, and alert events. Includes error handling scenarios for circuit breaker, timeout, and network error testing.",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "10446057"
   },
-  "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3001" },
-    { "key": "superUser", "value": "superadmin" },
-    { "key": "superApiKey", "value": "dev-superadmin-key" },
-    { "key": "orgId", "value": "11111111-2222-3333-4444-555555555555" },
-    { "key": "alertId", "value": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
-    { "key": "userId", "value": "99999999-8888-7777-6666-555555555555" },
-    { "key": "jwtAdmin", "value": "" },
-    { "key": "jwtUser", "value": "" },
-    { "key": "jwtSuperadmin", "value": "", "description": "JWT token for superadmin user (role: superadmin)" }
-  ],
   "item": [
-    {
-      "name": "Health",
-      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
-      "response": []
-    },
     {
       "name": "Auth",
       "item": [
@@ -29,12 +14,26 @@
           "name": "Login (email/password)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPass123\"\n}"
             },
-            "url": "{{baseUrl}}/auth/login"
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
           },
           "response": []
         },
@@ -42,12 +41,26 @@
           "name": "Login - Invalid Credentials (401)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"WrongPassword\"\n}"
             },
-            "url": "{{baseUrl}}/auth/login"
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
           },
           "response": []
         }
@@ -61,38 +74,87 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "x-superuser", "value": "{{superUser}}" },
-              { "key": "x-api-key", "value": "{{superApiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "x-superuser",
+                "value": "{{superUser}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{superApiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Acme Corp\",\n  \"address\": \"123 Main St\",\n  \"contact\": \"owner@example.com\"\n}"
             },
-            "url": "{{baseUrl}}/organizations"
-          }
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "List Organizations",
           "request": {
             "method": "GET",
             "header": [
-              { "key": "x-superuser", "value": "{{superUser}}" },
-              { "key": "x-api-key", "value": "{{superApiKey}}" }
+              {
+                "key": "x-superuser",
+                "value": "{{superUser}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{superApiKey}}"
+              }
             ],
-            "url": "{{baseUrl}}/organizations"
-          }
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Get Organization by ID",
           "request": {
             "method": "GET",
             "header": [
-              { "key": "x-superuser", "value": "{{superUser}}" },
-              { "key": "x-api-key", "value": "{{superApiKey}}" }
+              {
+                "key": "x-superuser",
+                "value": "{{superUser}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{superApiKey}}"
+              }
             ],
-            "url": "{{baseUrl}}/organizations/{{orgId}}"
-          }
+            "url": {
+              "raw": "{{baseUrl}}/organizations/{{orgId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "{{orgId}}"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -104,70 +166,197 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Org User\",\n  \"address\": \"123 Main St\",\n  \"email\": \"user1@example.com\",\n  \"phone\": \"555-9999\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"admin\"\n}"
             },
-            "url": "{{baseUrl}}/users"
-          }
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Create User for Different Org (superadmin)",
-          "description": "Superadmin can create users for any organization by specifying organizationId in the request body",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtSuperadmin}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtSuperadmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Cross-Org User\",\n  \"address\": \"456 Oak Ave\",\n  \"email\": \"crossorg@example.com\",\n  \"phone\": \"555-1234\",\n  \"password\": \"StrongPass123\",\n  \"role\": \"admin\",\n  \"organizationId\": \"{{orgId}}\"\n}"
             },
-            "url": "{{baseUrl}}/users"
-          }
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "List Users",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
-            "url": "{{baseUrl}}/users"
-          }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Get User by ID",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
-            "url": "{{baseUrl}}/users/{{userId}}"
-          }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Update User (password optional)",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Name\",\n  \"phone\": \"555-0000\",\n  \"password\": \"NewStrongPass123\"\n}"
             },
-            "url": "{{baseUrl}}/users/{{userId}}"
-          }
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "Delete User",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
-            "url": "{{baseUrl}}/users/{{userId}}"
-          }
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Admin (superadmin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtSuperadmin}}"
+              },
+              {
+                "key": "x-superuser",
+                "value": "{{superUser}}"
+              },
+              {
+                "key": "x-api-key",
+                "value": "{{superApiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"description\": \"Demo org\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -179,14 +368,28 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"alertContext\": \"CPU usage > 90%\",\n  \"status\": \"New\"\n}"
             },
-            "url": "{{baseUrl}}/alerts"
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            }
           },
           "response": []
         },
@@ -195,14 +398,28 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"New\"\n}"
             },
-            "url": "{{baseUrl}}/alerts"
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            }
           },
           "response": []
         },
@@ -210,14 +427,29 @@
           "name": "List Alerts",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/alerts?status=New&mine=false",
-              "host": ["{{baseUrl}}"],
-              "path": ["alerts"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ],
               "query": [
-                { "key": "status", "value": "New" },
-                { "key": "mine", "value": "false" }
+                {
+                  "key": "status",
+                  "value": "New"
+                },
+                {
+                  "key": "mine",
+                  "value": "false"
+                }
               ]
             }
           },
@@ -227,8 +459,21 @@
           "name": "List Alerts - Unauthorized (401)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer invalid-token" }],
-            "url": "{{baseUrl}}/alerts"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid-token"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            }
           },
           "response": []
         },
@@ -237,14 +482,30 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"Acknowledged\"\n}"
             },
-            "url": "{{baseUrl}}/alerts/{{alertId}}/status"
+            "url": {
+              "raw": "{{baseUrl}}/alerts/{{alertId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alertId}}",
+                "status"
+              ]
+            }
           },
           "response": []
         },
@@ -253,14 +514,29 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"alertContext\": \"Adjusted context\",\n  \"status\": \"Resolved\"\n}"
             },
-            "url": "{{baseUrl}}/alerts/{{alertId}}"
+            "url": {
+              "raw": "{{baseUrl}}/alerts/{{alertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alertId}}"
+              ]
+            }
           },
           "response": []
         },
@@ -269,14 +545,29 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"status\": \"Resolved\"\n}"
             },
-            "url": "{{baseUrl}}/alerts/00000000-0000-0000-0000-000000000000"
+            "url": {
+              "raw": "{{baseUrl}}/alerts/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
           },
           "response": []
         },
@@ -284,8 +575,22 @@
           "name": "Delete Alert",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
-            "url": "{{baseUrl}}/alerts/{{alertId}}"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alerts/{{alertId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alertId}}"
+              ]
+            }
           },
           "response": []
         },
@@ -293,8 +598,23 @@
           "name": "List Alert Events",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
-            "url": "{{baseUrl}}/alerts/{{alertId}}/events"
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alerts/{{alertId}}/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts",
+                "{{alertId}}",
+                "events"
+              ]
+            }
           },
           "response": []
         }
@@ -302,14 +622,26 @@
     },
     {
       "name": "Error Handling Tests",
-      "description": "Tests for circuit breaker, retry, and error response patterns",
       "item": [
         {
           "name": "Test Circuit Breaker Recovery",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
-            "url": "{{baseUrl}}/alerts",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            },
             "description": "After multiple failures (5+), backend opens circuit breaker. Subsequent requests return 503 with 'Service temporarily unavailable - circuit breaker is OPEN'. Circuit recovers after 60 seconds."
           },
           "response": []
@@ -319,14 +651,28 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtAdmin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"invalidField\": \"test\"\n}"
             },
-            "url": "{{baseUrl}}/alerts",
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            },
             "description": "Sends invalid payload to test 400 error response handling."
           },
           "response": []
@@ -336,7 +682,15 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/alerts",
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            },
             "description": "Request without Authorization header triggers 401 Unauthorized."
           },
           "response": []
@@ -346,19 +700,90 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtUser}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test123\"\n}"
             },
-            "url": "{{baseUrl}}/users",
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
             "description": "Non-admin user attempting admin-only operation triggers 403 Forbidden."
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Tests for circuit breaker, retry, and error response patterns"
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "superUser",
+      "value": "superadmin"
+    },
+    {
+      "key": "superApiKey",
+      "value": "dev-superadmin-key"
+    },
+    {
+      "key": "orgId",
+      "value": "11111111-2222-3333-4444-555555555555"
+    },
+    {
+      "key": "alertId",
+      "value": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    },
+    {
+      "key": "userId",
+      "value": "99999999-8888-7777-6666-555555555555"
+    },
+    {
+      "key": "jwtAdmin",
+      "value": ""
+    },
+    {
+      "key": "jwtUser",
+      "value": ""
+    },
+    {
+      "key": "jwtSuperadmin",
+      "value": "",
+      "description": "JWT token for superadmin user (role: superadmin)"
     }
   ]
 }
