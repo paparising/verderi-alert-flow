@@ -14,68 +14,94 @@ Event flow: API writes/updates alerts → publishes to Kafka → persistence con
 
 ## Quickstart
 
-**Prereqs:** Docker + Docker Compose, Node 18+, npm.
+# Videri Alert Flow
+
+Event-driven alert management built with NestJS, React, Kafka, PostgreSQL, and WebSockets. This README consolidates the key developer and operations information.
+
+## Architecture
+
+- **frontend** (`packages/frontend`): React + TypeScript served by Nginx.
+- **backend-api** (`packages/backend-api`): REST API, Kafka producer, authentication and role enforcement (port 3001).
+- **backend-persistence** (`packages/backend-persistence`): Kafka consumer that persists alert events to Postgres.
+- **backend-notification** (`packages/backend-notification`): Kafka consumer + WebSocket server (Socket.IO) that emits real-time notifications (port 3002).
+- **shared** (`packages/shared`): DTOs, entities and enums shared across services.
+
+Event flow: API writes/updates alerts → publishes to Kafka (`alert-events`) → persistence consumer stores history → notification consumer pushes real-time events via WebSockets.
+
+## Quickstart
+
+Prerequisites: Docker, Docker Compose, Node.js (recommended 18+), npm.
+
+From the repository root:
 
 ```bash
-# from repo root
-cp .env.dev.example .env.dev   # if provided
+# copy an example env if needed
+cp .env.dev.example .env.dev
+
 docker compose --env-file .env.dev up --build
 ```
 
-Services:
+Service endpoints (local):
 
 - Frontend: http://localhost
 - API: http://localhost:3001
-- WebSocket: http://localhost:3002
-- Postgres: localhost:5438 (inside compose: db:5432)
-- Kafka: localhost:9092 (inside compose: kafka:9092)
+- WebSocket (backend-notification): http://localhost:3002
+- Postgres (host): localhost:5438 → container `db:5432`
+- Kafka: localhost:9092 → container `kafka:9092`
 
-Stop: `docker compose down`
+Stop services:
+
+```bash
+docker compose down
+```
 
 ## Environment
 
-Each service has `.env.dev` / `.env.prod` in its folder; compose can also read root `.env.dev` / `.env.prod`.
+Each package may include `.env.dev` and `.env.prod` files. Compose can read a root `.env.dev`/`.env.prod` via `--env-file`.
 
-Common variables (root or per-service):
+Common env vars:
 
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`
 - `KAFKA_BROKER`
-- `PORT` (API external), `NODE_ENV`
+- `PORT`, `NODE_ENV`
 - Frontend: `REACT_APP_API_URL`, `REACT_APP_WS_URL`
 
-Priority when running compose: shell env > service `environment:` > `--env-file` > service `.env`. Keep production secrets out of git.
+Precedence when running Compose: shell env > service `environment:` > `--env-file` > service `.env`.
 
 ## Local Development
 
-Install dependencies once: `npm run install:all`
+- Install all deps: `npm run install:all`
+- Build shared package: `npm run build:shared`
+- Build all: `npm run build:all`
 
-Build all: `npm run build:all`
+Run packages individually (from root or inside package):
 
-Run individually (after `npm run build:shared`):
+- API (dev): `npm run dev:api` or `npm run start:dev` in `packages/backend-api`
+- Persistence (dev): `npm run dev:persistence`
+- Notification (dev): `npm run dev:notification`
+- Frontend (dev): `npm run dev:frontend`
 
-- API: `npm run dev:api` (or inside package: `npm run start:dev`)
-- Persistence: `npm run dev:persistence`
-- Notification: `npm run dev:notification`
-- Frontend: `npm run dev:frontend` (React dev server)
+Tests:
 
-Tests: `npm test` (root) or per workspace (`npm run test --workspace=frontend -- --watch=false`).
+- Run all tests: `npm test`
+- Run frontend tests: `npm run test --workspace=frontend -- --watch=false`
 
-## API + Auth
+## API & Auth
 
-- Superadmin-only org management: headers `x-superuser` and `x-api-key` on `/organizations` endpoints.
-- Auth: `POST /auth/login` with `email`, `password` → JWT.
-- Admin-only user management: `/users` CRUD; `password` required on create, optional on update. Role defaults to `user` if omitted.
-- **Superadmin cross-org user creation**: Superadmins (role: `superadmin`) can create users for any organization by including `organizationId` in the request body when calling `POST /users`.
-- Alerts (admin/user): create/list/update/delete via `/alerts`; status values: `New`, `Acknowledged`, `Resolved`. Alert events history at `/alerts/{id}/events`.
+- Auth: `POST /auth/login` with `email` + `password` → JWT.
+- Superadmin-only org management endpoints (use appropriate superadmin headers).
+- Admin user management: `/users` CRUD; `password` required on create, optional on update. Role defaults to `user`.
+- Superadmins may create users for any organization by including `organizationId` in `POST /users`.
+- Alerts: create/list/update/delete under `/alerts`. Statuses: `New`, `Acknowledged`, `Resolved`. Event history: `/alerts/{id}/events`.
 
-Roles are enforced via JWT claims; org scoping is derived from the token (`orgId`, `userId`).
+Authorization and org scoping are enforced via JWT claims (`orgId`, `userId`).
 
 ## Kafka & WebSockets
 
 - Topic: `alert-events`
-- Producer: backend-api
-- Consumers: backend-persistence (`alert-events-persistence-group`), backend-notification (`alert-events-notification-group`)
-- WebSocket gateway (Socket.IO) runs in backend-notification on port 3002; clients connect to this service, join org rooms, and receive `newAlert`, `alertStatusUpdate`, `alertEvent`.
+- Producer: `backend-api`
+- Consumers: `backend-persistence` (group `alert-events-persistence-group`), `backend-notification` (group `alert-events-notification-group`)
+- WebSocket gateway runs in `backend-notification` (port 3002). Clients join organization rooms and receive events like `newAlert`, `alertStatusUpdate`, and `alertEvent`.
 
 ## Project Structure
 
@@ -89,37 +115,51 @@ videri-alert-flow/
 │  └─ frontend/                # React app (served by Nginx)
 ├─ docker-compose.yml
 ├─ docs/postman/videri-alert-flow.postman_collection.json
-└─ README.md (this file)
+└─ README.md
 ```
 
 ## Operations Cheatsheet
 
-- Compose dev: `docker compose --env-file .env.dev up --build`
-- Compose prod-ish: `docker compose --env-file .env.prod up --build -d`
-- Logs (all): `docker compose logs -f`
+- Dev compose: `docker compose --env-file .env.dev up --build`
+- Prod-ish compose: `docker compose --env-file .env.prod up --build -d`
+- Tail logs: `docker compose logs -f`
 - Scale consumers: `docker compose up --scale backend-persistence=3 --scale backend-notification=3`
 
 ## Postman Collection
 
-Updated collection lives at `docs/postman/videri-alert-flow.postman_collection.json` with environment variables for base URL, superadmin headers, JWTs, and sample payloads that include password fields for user create/update.
+Import the collection at [docs/postman/videri-alert-flow.postman_collection.json](docs/postman/videri-alert-flow.postman_collection.json). It includes env values for base URL, superadmin headers, JWTs, and sample create/update payloads.
 
-The collection includes:
+Included scopes:
 
-- **Health** - Service health check
-- **Auth** - Login with success and error scenarios
-- **Organizations** - Superadmin org management (create, list, get)
-- **Users** - Admin user CRUD operations
-- **Alerts** - Alert lifecycle including error scenarios (400, 401, 404)
-- **Error Handling Tests** - Circuit breaker, unauthorized, and forbidden scenarios
+- Health
+- Auth
+- Organizations (superadmin)
+- Users (admin)
+- Alerts (lifecycle and error scenarios)
+- Error handling tests
 
 ## Troubleshooting
 
-- API can’t reach DB: confirm `DB_HOST=db` inside Docker or `localhost` locally; external port 5438 maps to container 5432.
-- Kafka consumers idle: check `KAFKA_BROKER` and consumer group IDs; use `kafka-consumer-groups` inside the Kafka container.
-- WebSocket issues: ensure `REACT_APP_WS_URL` matches API base; check backend logs for connection events.
+- API → DB: confirm `DB_HOST` is reachable (`db` in-compose) or use mapped host port (5438).
+- Kafka consumers idle: verify `KAFKA_BROKER` and consumer groups inside the Kafka container.
+- WebSocket connectivity: ensure `REACT_APP_WS_URL` matches notification service and check backend-notification logs.
 
 ## Contributing
 
-- TypeScript across services; lint/format before PRs.
-- Conventional commits preferred (feat/fix/docs/etc.).
-- Keep shared changes exported from `packages/shared/src/index.ts` and rebuild shared before running dependents.
+- Use TypeScript style across packages; run lint/format before opening PRs.
+- Prefer conventional commits (`feat`, `fix`, `docs`, etc.).
+- Update `packages/shared/src/index.ts` for shared exports and rebuild shared before dependent packages.
+
+## Quick Demo
+
+1. Start the stack and import the Postman collection from `docs/postman/videri-alert-flow.postman_collection.json`.
+2. Create a dev environment in Postman (if not present) and set the base URL and JWT placeholders.
+3. Create an organization (copy UUID) and create an Admin user for that org via the Superadmin requests.
+4. Login as the Admin and exercise Alerts and Users requests; watch real-time updates via the frontend connected to the notification service.
+
+![Sample dev parameter](docs/images/image.png)
+![Create org](docs/images/image-1.png)
+![Create first Admin](docs/images/image-2.png)
+![Login page](docs/images/image-3.png)
+![Alert form tab](docs/images/image-4.png)
+![User form tab](docs/images/image-5.png)
