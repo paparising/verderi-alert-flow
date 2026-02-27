@@ -2,7 +2,7 @@
   "info": {
     "name": "Vederi Alert Flow API",
     "_postman_id": "c9b3d06d-0000-4c00-8000-000000000001",
-    "description": "API collection for superadmin org setup, admin user management, auth, alerts, and alert events.",
+    "description": "API collection for superadmin org setup, admin user management, auth, alerts, and alert events. Includes error handling scenarios for circuit breaker, timeout, and network error testing.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -18,7 +18,8 @@
   "item": [
     {
       "name": "Health",
-      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" },
+      "response": []
     },
     {
       "name": "Auth",
@@ -33,7 +34,21 @@
               "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPass123\"\n}"
             },
             "url": "{{baseUrl}}/auth/login"
-          }
+          },
+          "response": []
+        },
+        {
+          "name": "Login - Invalid Credentials (401)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"WrongPassword\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "response": []
         }
       ]
     },
@@ -155,7 +170,24 @@
               "raw": "{\n  \"alertContext\": \"CPU usage > 90%\",\n  \"status\": \"New\"\n}"
             },
             "url": "{{baseUrl}}/alerts"
-          }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Alert - Missing Context (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"New\"\n}"
+            },
+            "url": "{{baseUrl}}/alerts"
+          },
+          "response": []
         },
         {
           "name": "List Alerts",
@@ -171,7 +203,17 @@
                 { "key": "mine", "value": "false" }
               ]
             }
-          }
+          },
+          "response": []
+        },
+        {
+          "name": "List Alerts - Unauthorized (401)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer invalid-token" }],
+            "url": "{{baseUrl}}/alerts"
+          },
+          "response": []
         },
         {
           "name": "Update Alert Status",
@@ -186,7 +228,8 @@
               "raw": "{\n  \"status\": \"Acknowledged\"\n}"
             },
             "url": "{{baseUrl}}/alerts/{{alertId}}/status"
-          }
+          },
+          "response": []
         },
         {
           "name": "Update Alert (context/status)",
@@ -201,7 +244,24 @@
               "raw": "{\n  \"alertContext\": \"Adjusted context\",\n  \"status\": \"Resolved\"\n}"
             },
             "url": "{{baseUrl}}/alerts/{{alertId}}"
-          }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Alert - Not Found (404)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Resolved\"\n}"
+            },
+            "url": "{{baseUrl}}/alerts/00000000-0000-0000-0000-000000000000"
+          },
+          "response": []
         },
         {
           "name": "Delete Alert",
@@ -209,7 +269,8 @@
             "method": "DELETE",
             "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
             "url": "{{baseUrl}}/alerts/{{alertId}}"
-          }
+          },
+          "response": []
         },
         {
           "name": "List Alert Events",
@@ -217,7 +278,68 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{jwtUser}}" }],
             "url": "{{baseUrl}}/alerts/{{alertId}}/events"
-          }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Handling Tests",
+      "description": "Tests for circuit breaker, retry, and error response patterns",
+      "item": [
+        {
+          "name": "Test Circuit Breaker Recovery",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{jwtAdmin}}" }],
+            "url": "{{baseUrl}}/alerts",
+            "description": "After multiple failures (5+), backend opens circuit breaker. Subsequent requests return 503 with 'Service temporarily unavailable - circuit breaker is OPEN'. Circuit recovers after 60 seconds."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 400 Bad Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtAdmin}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invalidField\": \"test\"\n}"
+            },
+            "url": "{{baseUrl}}/alerts",
+            "description": "Sends invalid payload to test 400 error response handling."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 401 Unauthorized",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/alerts",
+            "description": "Request without Authorization header triggers 401 Unauthorized."
+          },
+          "response": []
+        },
+        {
+          "name": "Test 403 Forbidden",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwtUser}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"Test123\"\n}"
+            },
+            "url": "{{baseUrl}}/users",
+            "description": "Non-admin user attempting admin-only operation triggers 403 Forbidden."
+          },
+          "response": []
         }
       ]
     }

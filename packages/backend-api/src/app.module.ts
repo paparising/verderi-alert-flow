@@ -10,7 +10,7 @@ import { UserModule } from './user/user.module';
 import { AlertModule } from './alert/alert.module';
 import { RedisModule } from './redis/redis.module';
 import { RateLimitGuard } from './guards/rate-limit.guard';
-import { RateLimitHeadersInterceptor } from './interceptors/rate-limit-headers.interceptor';
+import { RateLimitHeadersInterceptor, CircuitBreakerService, RetryInterceptor } from './interceptors';
 import { Organization, User, Alert, AlertEvent, ProcessedEvent } from '@vederi/shared';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -42,6 +42,7 @@ import { HttpExceptionFilter } from '@vederi/shared';
   controllers: [AppController],
   providers: [
     AppService,
+    CircuitBreakerService,
     {
       // Auth guard runs before rate limiting so orgId is available from JWT
       provide: APP_GUARD,
@@ -54,6 +55,11 @@ import { HttpExceptionFilter } from '@vederi/shared';
     {
       provide: APP_GUARD,
       useClass: RateLimitGuard,
+    },
+    {
+      // Retry interceptor with circuit breaker - applied for all requests
+      provide: APP_INTERCEPTOR,
+      useClass: RetryInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

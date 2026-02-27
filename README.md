@@ -101,6 +101,15 @@ vederi-alert-flow/
 
 Updated collection lives at `docs/postman/vederi-alert-flow.postman_collection.json` with environment variables for base URL, superadmin headers, JWTs, and sample payloads that include password fields for user create/update.
 
+The collection includes:
+
+- **Health** - Service health check
+- **Auth** - Login with success and error scenarios
+- **Organizations** - Superadmin org management (create, list, get)
+- **Users** - Admin user CRUD operations
+- **Alerts** - Alert lifecycle including error scenarios (400, 401, 404)
+- **Error Handling Tests** - Circuit breaker, unauthorized, and forbidden scenarios
+
 ## Troubleshooting
 
 - API can’t reach DB: confirm `DB_HOST=db` inside Docker or `localhost` locally; external port 5438 maps to container 5432.

@@ -144,16 +144,16 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: packages/frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies (frontend)
-        working-directory: packages/frontend
+      - name: Install dependencies (root)
         run: npm install
 
+      - name: Build shared
+        run: npm run build:shared
+
       - name: Build frontend
-        working-directory: packages/frontend
-        run: npm run build
+        run: npm run build --workspace=frontend
 
       - name: Run tests
-        working-directory: packages/frontend
-        run: npm run test -- --coverage --watchAll=false
+        run: npm run test --workspace=frontend -- --coverage --watchAll=false
