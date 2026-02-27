@@ -24,7 +24,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          dockerfile: packages/backend-api/Dockerfile
+          file: packages/backend-api/Dockerfile
           push: false
           tags: vederi-alert-flow-backend-api:latest
           cache-from: type=gha
@@ -34,7 +34,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          dockerfile: packages/backend-persistence/Dockerfile
+          file: packages/backend-persistence/Dockerfile
           push: false
           tags: vederi-alert-flow-backend-persistence:latest
           cache-from: type=gha
@@ -44,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          dockerfile: packages/backend-notification/Dockerfile
+          file: packages/backend-notification/Dockerfile
           push: false
           tags: vederi-alert-flow-backend-notification:latest
           cache-from: type=gha
