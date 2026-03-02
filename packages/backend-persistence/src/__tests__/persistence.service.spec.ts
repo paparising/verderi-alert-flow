@@ -249,3 +249,4 @@ describe('EventPersistenceService', () => {
       ).resolves.not.toThrow();
     });
   });
+});
