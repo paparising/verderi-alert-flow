@@ -209,7 +209,6 @@ describe('AlertService', () => {
         ...createDto,
         eventId: 'event-id-123',
         createdAt: new Date(),
-        publishedAt: null,
       };
       queryRunner.manager.save.mockResolvedValue(savedEvent);
       alertEventRepo.create.mockReturnValue(savedEvent as AlertEvent);
