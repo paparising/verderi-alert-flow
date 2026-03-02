@@ -54,15 +54,30 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
   }, []);
 
   const handleAlertStatusUpdate = useCallback((updatedAlert: Alert) => {
-    setAlerts((prev) => prev.map((alert) => (alert.id === updatedAlert.id ? { ...alert, ...updatedAlert } : alert)));
-    setSelectedAlert((prev) => (prev?.id === updatedAlert.id ? { ...prev, ...updatedAlert } : prev));
+    setAlerts((prev) => prev.map((alert) => {
+      if (alert.id === updatedAlert.id && alert.status !== updatedAlert.status) {
+        return { ...alert, ...updatedAlert };
+      }
+      return alert;
+    }));
+    setSelectedAlert((prev) => {
+      if (prev?.id === updatedAlert.id && prev.status !== updatedAlert.status) {
+        return { ...prev, ...updatedAlert };
+      }
+      return prev;
+    });
     setEditForm((prev) =>
-      prev && selectedAlert?.id === updatedAlert.id
+      prev && selectedAlert?.id === updatedAlert.id && prev.status !== (updatedAlert.status as EditableStatus)
         ? { ...prev, status: updatedAlert.status as EditableStatus, alertContext: updatedAlert.alertContext }
         : prev,
     );
-    setDetailAlert((prev) => (prev?.id === updatedAlert.id ? { ...prev, ...updatedAlert } : prev));
-  }, [selectedAlert]);
+    setDetailAlert((prev) => {
+      if (prev?.id === updatedAlert.id && prev.status !== updatedAlert.status) {
+        return { ...prev, ...updatedAlert };
+      }
+      return prev;
+    });
+  }, [selectedAlert?.id]);
 
   const handleAlertEvent = useCallback((event: AlertEvent) => {
     setAlertEvents((prev) => {

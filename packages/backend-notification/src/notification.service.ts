@@ -33,7 +33,10 @@ export class EventNotificationService implements OnModuleInit, OnModuleDestroy {
     await this.consumer.run({
       eachMessage: async (payload: EachMessagePayload) => {
         await this.handleMessage(payload);
+        // Offset auto-commits after each message processed
       },
+      autoCommitInterval: 5000,
+      autoCommitThreshold: 1,
     });
   }
 
@@ -59,6 +62,8 @@ export class EventNotificationService implements OnModuleInit, OnModuleDestroy {
     console.log('[Notification Service] Kafka Consumer disconnected');
   }
 
+
+
   private async handleMessage({ topic, partition, message }: EachMessagePayload) {
     try {
       const eventData = JSON.parse(message.value?.toString() || '{}');
@@ -69,10 +74,10 @@ export class EventNotificationService implements OnModuleInit, OnModuleDestroy {
         case 'ALERT_CREATED':
           // For new alerts, construct full alert object from eventData
           const newAlert = {
-            id: eventData.eventData.alertId,
-            alertContext: eventData.eventData.alertContext,
-            status: eventData.eventData.status,
-            createdAt: eventData.eventData.createdAt,
+            id: eventData.alertId,
+            alertContext: eventData.alertContext,
+            status: eventData.status,
+            createdAt: eventData.createdAt,
             orgId: eventData.orgId,
           };
           this.alertGateway.emitNewAlert(eventData.orgId, newAlert);
@@ -82,19 +87,29 @@ export class EventNotificationService implements OnModuleInit, OnModuleDestroy {
         case 'ALERT_STATUS_CHANGED':
           // For status changes, emit status update with relevant data
           const statusUpdate = {
-            id: eventData.eventData.alertId,
-            previousStatus: eventData.eventData.previousStatus,
-            status: eventData.eventData.newStatus,
-            changedAt: eventData.eventData.changedAt,
+            id: eventData.alertId,
+            previousStatus: eventData.previousStatus,
+            status: eventData.newStatus,
+            changedAt: eventData.changedAt,
           };
           this.alertGateway.emitAlertStatusUpdate(eventData.orgId, statusUpdate);
-          console.log(`[Notification Service] Status update notification sent: ${eventData.eventId}`);
+          console.log(`[Notification Service] Status update notification sent: ${eventData.eventId} -> ${eventData.newStatus}`);
           break;
 
         case 'ALERT_CONTEXT_CHANGED':
+          // For context changes
+          const contextUpdate = {
+            id: eventData.alertId,
+            alertContext: eventData.alertContext,
+            changedAt: eventData.changedAt,
+          };
+          this.alertGateway.emitAlertEvent(eventData.orgId, contextUpdate);
+          console.log(`[Notification Service] Context update notification sent: ${eventData.eventId}`);
+          break;
+
         case 'ALERT_EVENT_CREATED':
         default:
-          // For context changes and generic events, use generic emitter
+          // For generic events, use generic emitter
           this.alertGateway.emitAlertEvent(eventData.orgId, eventData);
           console.log(`[Notification Service] Generic event notification sent: ${eventData.eventId}`);
           break;

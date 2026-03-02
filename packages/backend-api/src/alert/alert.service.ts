@@ -1,6 +1,6 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Alert, AlertEvent, CreateAlertDto, CreateAlertEventDto, AlertStatus, UpdateAlertDto } from '@videri/shared';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,35 +13,48 @@ export class AlertService {
     @InjectRepository(AlertEvent)
     private alertEventRepo: Repository<AlertEvent>,
     private kafkaProducer: KafkaProducerService,
+    private dataSource: DataSource,
   ) {}
 
   async createAlert(dto: CreateAlertDto) {
-    const alert = this.alertRepo.create({
-      orgId: dto.orgId,
-      alertId: uuidv4(),
-      alertContext: dto.alertContext,
-      status: dto.status || AlertStatus.NEW,
-      createdBy: dto.createdBy,
-    });
-    const savedAlert = await this.alertRepo.save(alert);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     
-    // Send new alert event to Kafka - backend-notification will handle WebSocket emission
-    const eventData = {
-      orgId: dto.orgId,
-      alertId: savedAlert.id,
-      eventId: uuidv4(),
-      eventType: 'ALERT_CREATED',
-      eventData: {
+    try {
+      // Create and save alert
+      const alert = this.alertRepo.create({
+        orgId: dto.orgId,
+        alertId: uuidv4(),
+        alertContext: dto.alertContext,
+        status: dto.status || AlertStatus.NEW,
+        createdBy: dto.createdBy,
+      });
+      const savedAlert = await queryRunner.manager.save(alert);
+      
+      // Create and save alert event in the same transaction
+      const alertEvent = this.alertEventRepo.create({
+        orgId: dto.orgId,
         alertId: savedAlert.id,
-        alertContext: savedAlert.alertContext,
-        status: savedAlert.status,
-        createdAt: savedAlert.createdAt.toISOString(),
-      },
-      createdBy: dto.createdBy,
-    };
-    await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
-    
-    return savedAlert;
+        eventId: uuidv4(),
+        eventData: {
+          eventType: 'ALERT_CREATED',
+          alertContext: savedAlert.alertContext,
+          status: savedAlert.status,
+          createdAt: savedAlert.createdAt.toISOString(),
+        },
+        createdBy: dto.createdBy,
+      });
+      await queryRunner.manager.save(alertEvent);
+      
+      await queryRunner.commitTransaction();
+      return savedAlert;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async getAlertsByOrg(orgId: string, status?: string) {
@@ -65,50 +78,74 @@ export class AlertService {
   }
 
   async updateAlertStatus(id: string, orgId: string, status: AlertStatus, updatedBy: string) {
-    const alert = await this.alertRepo.findOne({
-      where: { id, orgId },
-    });
-    if (!alert) {
-      throw new ForbiddenException('Alert not found in this organization');
-    }
-    const previousStatus = alert.status;
-    alert.status = status;
-    alert.updatedBy = updatedBy;
-    const updatedAlert = await this.alertRepo.save(alert);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // Send event to Kafka - consumer will handle persistence and WebSocket notification
-    const eventData = {
-      orgId,
-      alertId: alert.id,
-      eventId: uuidv4(),
-      eventType: 'ALERT_STATUS_CHANGED',
-      eventData: {
+    try {
+      const alert = await queryRunner.manager.findOne(Alert, {
+        where: { id, orgId },
+      });
+      if (!alert) {
+        throw new ForbiddenException('Alert not found in this organization');
+      }
+      const previousStatus = alert.status;
+      alert.status = status;
+      alert.updatedBy = updatedBy;
+      const updatedAlert = await queryRunner.manager.save(alert);
+
+      // Create event in the same transaction
+      const eventData = this.alertEventRepo.create({
+        orgId,
         alertId: alert.id,
-        previousStatus,
-        newStatus: status,
-        changedAt: new Date().toISOString(),
-      },
-      createdBy: updatedBy,
-    };
+        eventId: uuidv4(),
+        eventData: {
+          eventType: 'ALERT_STATUS_CHANGED',
+          alertId: alert.id,
+          previousStatus,
+          newStatus: status,
+          changedAt: new Date().toISOString(),
+        },
+        createdBy: updatedBy,
+      });
+      await queryRunner.manager.save(eventData);
 
-    await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
-
-    return updatedAlert;
+      await queryRunner.commitTransaction();
+      return updatedAlert;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async createAlertEvent(dto: CreateAlertEventDto) {
-    // Send to Kafka instead of directly saving
-    const eventData = {
-      orgId: dto.orgId,
-      alertId: dto.alertId,
-      eventId: uuidv4(),
-      eventType: 'ALERT_EVENT_CREATED',
-      eventData: dto.eventData,
-      createdBy: dto.createdBy,
-    };
-    
-    await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
-    return eventData;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const alertEvent = this.alertEventRepo.create({
+        orgId: dto.orgId,
+        alertId: dto.alertId,
+        eventId: uuidv4(),
+        eventData: {
+          eventType: 'ALERT_EVENT_CREATED',
+          ...dto.eventData,
+        },
+        createdBy: dto.createdBy,
+      });
+
+      const savedEvent = await queryRunner.manager.save(alertEvent);
+      await queryRunner.commitTransaction();
+      return savedEvent;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async getAlertEventsByAlert(alertId: string, orgId: string) {
@@ -122,57 +159,68 @@ export class AlertService {
   }
 
   async updateAlert(id: string, orgId: string, updatedBy: string, dto: UpdateAlertDto) {
-    const alert = await this.alertRepo.findOne({ where: { id, orgId } });
-    if (!alert) {
-      throw new ForbiddenException('Alert not found in this organization');
-    }
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const previousStatus = alert.status;
-    const nextStatus = dto.status ?? alert.status;
-    const contextChanged = dto.alertContext && dto.alertContext !== alert.alertContext;
-    const statusChanged = dto.status && dto.status !== alert.status;
+    try {
+      const alert = await queryRunner.manager.findOne(Alert, { where: { id, orgId } });
+      if (!alert) {
+        throw new ForbiddenException('Alert not found in this organization');
+      }
 
-    if (dto.alertContext) {
-      alert.alertContext = dto.alertContext;
-    }
-    alert.status = nextStatus;
-    alert.updatedBy = updatedBy;
+      const previousStatus = alert.status;
+      const nextStatus = dto.status ?? alert.status;
+      const contextChanged = dto.alertContext && dto.alertContext !== alert.alertContext;
+      const statusChanged = dto.status && dto.status !== alert.status;
 
-    const updatedAlert = await this.alertRepo.save(alert);
+      if (dto.alertContext) {
+        alert.alertContext = dto.alertContext;
+      }
+      alert.status = nextStatus;
+      alert.updatedBy = updatedBy;
 
-    if (statusChanged) {
-      const eventData = {
-        orgId,
-        alertId: alert.id,
-        eventId: uuidv4(),
-        eventType: 'ALERT_STATUS_CHANGED',
-        eventData: {
+      const updatedAlert = await queryRunner.manager.save(alert);
+
+      if (statusChanged) {
+        const eventData = this.alertEventRepo.create({
+          orgId,
           alertId: alert.id,
-          previousStatus,
-          newStatus: nextStatus,
-          changedAt: new Date().toISOString(),
-        },
-        createdBy: updatedBy,
-      };
-      await this.kafkaProducer.sendAlertEvent('alert-events', eventData);
-    } else if (contextChanged) {
-      // Send context change event to Kafka for WebSocket notification
-      const contextEventData = {
-        orgId,
-        alertId: alert.id,
-        eventId: uuidv4(),
-        eventType: 'ALERT_CONTEXT_CHANGED',
-        eventData: {
+          eventId: uuidv4(),
+          eventData: {
+            eventType: 'ALERT_STATUS_CHANGED',
+            alertId: alert.id,
+            previousStatus,
+            newStatus: nextStatus,
+            changedAt: new Date().toISOString(),
+          },
+          createdBy: updatedBy,
+        });
+        await queryRunner.manager.save(eventData);
+      } else if (contextChanged) {
+        const contextEventData = this.alertEventRepo.create({
+          orgId,
           alertId: alert.id,
-          alertContext: alert.alertContext,
-          changedAt: new Date().toISOString(),
-        },
-        createdBy: updatedBy,
-      };
-      await this.kafkaProducer.sendAlertEvent('alert-events', contextEventData);
-    }
+          eventId: uuidv4(),
+          eventData: {
+            eventType: 'ALERT_CONTEXT_CHANGED',
+            alertId: alert.id,
+            alertContext: alert.alertContext,
+            changedAt: new Date().toISOString(),
+          },
+          createdBy: updatedBy,
+        });
+        await queryRunner.manager.save(contextEventData);
+      }
 
-    return updatedAlert;
+      await queryRunner.commitTransaction();
+      return updatedAlert;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async deleteAlert(id: string, orgId: string) {
