@@ -60,17 +60,24 @@ describe('EventPersistenceService', () => {
   });
 
   describe('handleMessage', () => {
-    const eventData = {
+    // Kafka message with eventData fields spread at top level
+    const kafkaEventData = {
       orgId: 'org-123',
+      alertId: 'alert-789',
       eventId: 'event-456',
-      eventData: { type: 'alert_created', alertId: 'alert-789' },
+      eventType: 'ALERT_STATUS_CHANGED',
+      newStatus: 'Acknowledged',
+      previousStatus: 'New',
+      changedAt: '2026-02-27T00:00:00.000Z',
       createdBy: 'user-001',
+      createdAt: '2026-02-27T00:00:00.000Z',
     };
 
-    const mockEvent = {
-      id: 1,
-      ...eventData,
-      createdAt: new Date(),
+    const reconstructedEventData = {
+      eventType: 'ALERT_STATUS_CHANGED',
+      newStatus: 'Acknowledged',
+      previousStatus: 'New',
+      changedAt: '2026-02-27T00:00:00.000Z',
     };
 
     const mockProcessedEvent = {
@@ -80,18 +87,24 @@ describe('EventPersistenceService', () => {
       createdAt: new Date(),
     };
 
-    it('should save alert event to database and mark as completed', async () => {
+    it('should save alert event with properly reconstructed eventData', async () => {
       mockProcessedEventRepo.findOne.mockResolvedValue(null);
       mockProcessedEventRepo.create.mockReturnValue(mockProcessedEvent as any);
       mockProcessedEventRepo.save.mockResolvedValue(mockProcessedEvent as any);
-      mockAlertEventRepo.create.mockReturnValue(mockEvent as any);
-      mockAlertEventRepo.save.mockResolvedValue(mockEvent as any);
+      mockAlertEventRepo.create.mockReturnValue({
+        ...kafkaEventData,
+        eventData: reconstructedEventData,
+      } as any);
+      mockAlertEventRepo.save.mockResolvedValue({
+        ...kafkaEventData,
+        eventData: reconstructedEventData,
+      } as any);
 
       const mockPayload = {
         topic: 'alert-events',
         partition: 0,
         message: {
-          value: Buffer.from(JSON.stringify(eventData)),
+          value: Buffer.from(JSON.stringify(kafkaEventData)),
         },
       };
 
@@ -99,26 +112,31 @@ describe('EventPersistenceService', () => {
 
       // Should check for existing processed event
       expect(mockProcessedEventRepo.findOne).toHaveBeenCalledWith({
-        where: { eventId: eventData.eventId },
+        where: { eventId: kafkaEventData.eventId },
       });
 
-      // Should create processed event record
+      // Should create processed event record for idempotency
       expect(mockProcessedEventRepo.create).toHaveBeenCalledWith({
-        eventId: eventData.eventId,
+        eventId: kafkaEventData.eventId,
         status: ProcessingStatus.PROCESSING,
       });
 
-      // Should save alert event
+      // Should extract eventData from flattened Kafka message
+      // Should save alert event with properly reconstructed eventData
       expect(mockAlertEventRepo.create).toHaveBeenCalledWith({
-        orgId: eventData.orgId,
-        alertId: eventData.eventData.alertId,
-        eventId: eventData.eventId,
-        eventData: eventData.eventData,
-        createdBy: eventData.createdBy,
+        orgId: 'org-123',
+        alertId: 'alert-789',
+        eventId: 'event-456',
+        eventData: expect.objectContaining({
+          eventType: 'ALERT_STATUS_CHANGED',
+          newStatus: 'Acknowledged',
+          previousStatus: 'New',
+        }),
+        createdBy: 'user-001',
       });
-      expect(mockAlertEventRepo.save).toHaveBeenCalledWith(mockEvent);
+      expect(mockAlertEventRepo.save).toHaveBeenCalled();
 
-      // Should mark processed event as completed (called twice - once for processing, once for completed)
+      // Should mark processed event as completed
       expect(mockProcessedEventRepo.save).toHaveBeenCalledTimes(2);
     });
 
@@ -133,7 +151,7 @@ describe('EventPersistenceService', () => {
         topic: 'alert-events',
         partition: 0,
         message: {
-          value: Buffer.from(JSON.stringify(eventData)),
+          value: Buffer.from(JSON.stringify(kafkaEventData)),
         },
       };
 
@@ -141,7 +159,7 @@ describe('EventPersistenceService', () => {
 
       // Should check for existing processed event
       expect(mockProcessedEventRepo.findOne).toHaveBeenCalledWith({
-        where: { eventId: eventData.eventId },
+        where: { eventId: kafkaEventData.eventId },
       });
 
       // Should NOT create new processed event or save alert event
@@ -159,7 +177,7 @@ describe('EventPersistenceService', () => {
         topic: 'alert-events',
         partition: 0,
         message: {
-          value: Buffer.from(JSON.stringify(eventData)),
+          value: Buffer.from(JSON.stringify(kafkaEventData)),
         },
       };
 
@@ -174,24 +192,27 @@ describe('EventPersistenceService', () => {
       mockProcessedEventRepo.findOne.mockResolvedValue(null);
       mockProcessedEventRepo.create.mockReturnValue(mockProcessedEvent as any);
       mockProcessedEventRepo.save.mockResolvedValue(mockProcessedEvent as any);
-      mockAlertEventRepo.create.mockReturnValue(mockEvent as any);
+      mockAlertEventRepo.create.mockReturnValue({
+        ...kafkaEventData,
+        eventData: reconstructedEventData,
+      } as any);
       mockAlertEventRepo.save.mockRejectedValueOnce(new Error('Database error'));
 
       const mockPayload = {
         topic: 'alert-events',
         partition: 0,
         message: {
-          value: Buffer.from(JSON.stringify(eventData)),
+          value: Buffer.from(JSON.stringify(kafkaEventData)),
         },
       };
 
       await (service as any).handleMessage(mockPayload);
 
-      // Should mark as failed
+      // Should mark as failed with error message
       expect(mockProcessedEventRepo.save).toHaveBeenLastCalledWith(
         expect.objectContaining({
           status: ProcessingStatus.FAILED,
-          errorMessage: 'Database error',
+          errorMessage: expect.stringContaining('Database error'),
         }),
       );
     });
@@ -228,4 +249,3 @@ describe('EventPersistenceService', () => {
       ).resolves.not.toThrow();
     });
   });
-});

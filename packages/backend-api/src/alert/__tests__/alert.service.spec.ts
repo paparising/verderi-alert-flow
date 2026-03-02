@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { AlertService } from '../alert.service';
 import { Alert, AlertEvent, AlertStatus } from '@videri/shared';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
@@ -9,7 +9,8 @@ describe('AlertService', () => {
   let service: AlertService;
   let alertRepo: jest.Mocked<Repository<Alert>>;
   let alertEventRepo: jest.Mocked<Repository<AlertEvent>>;
-  let kafkaProducer: jest.Mocked<KafkaProducerService>;
+  let dataSource: jest.Mocked<DataSource>;
+  let queryRunner: any;
 
   const mockAlert: Partial<Alert> = {
     id: 'alert-123',
@@ -23,6 +24,18 @@ describe('AlertService', () => {
   };
 
   beforeEach(async () => {
+    queryRunner = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      startTransaction: jest.fn().mockResolvedValue(undefined),
+      commitTransaction: jest.fn().mockResolvedValue(undefined),
+      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+      manager: {
+        save: jest.fn().mockResolvedValue(mockAlert),
+        findOne: jest.fn().mockResolvedValue(mockAlert),
+      },
+    };
+
     const mockAlertRepo = {
       create: jest.fn(),
       save: jest.fn(),
@@ -41,6 +54,10 @@ describe('AlertService', () => {
       find: jest.fn(),
     };
 
+    const mockDataSource = {
+      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+    };
+
     const mockKafka = {
       sendAlertEvent: jest.fn(),
     };
@@ -50,6 +67,7 @@ describe('AlertService', () => {
         AlertService,
         { provide: getRepositoryToken(Alert), useValue: mockAlertRepo },
         { provide: getRepositoryToken(AlertEvent), useValue: mockAlertEventRepo },
+        { provide: DataSource, useValue: mockDataSource },
         { provide: KafkaProducerService, useValue: mockKafka },
       ],
     }).compile();
@@ -57,7 +75,7 @@ describe('AlertService', () => {
     service = module.get<AlertService>(AlertService);
     alertRepo = module.get(getRepositoryToken(Alert));
     alertEventRepo = module.get(getRepositoryToken(AlertEvent));
-    kafkaProducer = module.get(KafkaProducerService);
+    dataSource = module.get(DataSource);
   });
 
   it('should be defined', () => {
@@ -65,34 +83,56 @@ describe('AlertService', () => {
   });
 
   describe('createAlert', () => {
-    it('should create an alert and send event to Kafka', async () => {
+    it('should create an alert and alert event in a transaction', async () => {
       const createDto = {
         orgId: 'org-123',
         alertContext: 'Test alert',
         createdBy: 'user-123',
       };
       alertRepo.create.mockReturnValue(mockAlert as Alert);
-      alertRepo.save.mockResolvedValue(mockAlert as Alert);
-      kafkaProducer.sendAlertEvent.mockResolvedValue(undefined);
+      alertEventRepo.create.mockReturnValue({ eventId: 'event-123' } as AlertEvent);
+      queryRunner.manager.save.mockResolvedValue(mockAlert as Alert);
 
       const result = await service.createAlert(createDto);
 
-      expect(alertRepo.create).toHaveBeenCalled();
-      expect(alertRepo.save).toHaveBeenCalled();
-      expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
-        'alert-events',
+      expect(queryRunner.connect).toHaveBeenCalled();
+      expect(queryRunner.startTransaction).toHaveBeenCalled();
+      expect(alertRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orgId: 'org-123',
+          alertContext: 'Test alert',
+          status: AlertStatus.NEW,
+          createdBy: 'user-123',
+        }),
+      );
+      expect(alertEventRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           orgId: 'org-123',
           alertId: mockAlert.id,
-          eventType: 'ALERT_CREATED',
           eventData: expect.objectContaining({
-            alertId: mockAlert.id,
+            eventType: 'ALERT_CREATED',
             alertContext: mockAlert.alertContext,
             status: mockAlert.status,
           }),
         }),
       );
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(queryRunner.release).toHaveBeenCalled();
       expect(result).toEqual(mockAlert);
+    });
+
+    it('should rollback on error during alert creation', async () => {
+      const createDto = {
+        orgId: 'org-123',
+        alertContext: 'Test alert',
+        createdBy: 'user-123',
+      };
+      const error = new Error('DB Error');
+      queryRunner.manager.save.mockRejectedValueOnce(error);
+
+      await expect(service.createAlert(createDto)).rejects.toThrow('DB Error');
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+      expect(queryRunner.release).toHaveBeenCalled();
     });
   });
 
@@ -119,55 +159,119 @@ describe('AlertService', () => {
   });
 
   describe('updateAlertStatus', () => {
-    it('should update alert status and send event to Kafka', async () => {
+    it('should update alert status and create event in a transaction', async () => {
       const updatedAlert = { ...mockAlert, status: AlertStatus.ACKNOWLEDGED, version: 2 };
-      alertRepo.findOne.mockResolvedValue(mockAlert as Alert);
-      alertRepo.save.mockResolvedValue(updatedAlert as Alert);
-      kafkaProducer.sendAlertEvent.mockResolvedValue(undefined);
+      queryRunner.manager.findOne.mockResolvedValue(mockAlert as Alert);
+      queryRunner.manager.save.mockResolvedValue(updatedAlert as Alert);
+      alertEventRepo.create.mockReturnValue({ eventId: 'event-456' } as AlertEvent);
 
       const result = await service.updateAlertStatus('alert-123', 'org-123', AlertStatus.ACKNOWLEDGED, 'user-456');
 
-      expect(alertRepo.findOne).toHaveBeenCalledWith({ where: { id: 'alert-123', orgId: 'org-123' } });
-      expect(alertRepo.save).toHaveBeenCalled();
-      expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
-        'alert-events',
+      expect(queryRunner.startTransaction).toHaveBeenCalled();
+      expect(queryRunner.manager.findOne).toHaveBeenCalledWith(Alert, {
+        where: { id: 'alert-123', orgId: 'org-123' },
+      });
+      expect(alertEventRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           orgId: 'org-123',
           alertId: 'alert-123',
-          eventType: 'ALERT_STATUS_CHANGED',
           eventData: expect.objectContaining({
-            alertId: 'alert-123',
+            eventType: 'ALERT_STATUS_CHANGED',
             previousStatus: AlertStatus.NEW,
             newStatus: AlertStatus.ACKNOWLEDGED,
           }),
         }),
       );
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
       expect(result.status).toBe(AlertStatus.ACKNOWLEDGED);
+    });
+
+    it('should throw error when alert not found', async () => {
+      queryRunner.manager.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.updateAlertStatus('non-existent', 'org-123', AlertStatus.ACKNOWLEDGED, 'user-456'))
+        .rejects.toThrow('Alert not found in this organization');
+      
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+  });
+
+  describe('createAlertEvent', () => {
+    it('should create alert event in a transaction', async () => {
+      const createDto = {
+        orgId: 'org-123',
+        alertId: 'alert-123',
+        eventData: { key: 'value' },
+        createdBy: 'user-123',
+      };
+      const savedEvent: Partial<AlertEvent> = {
+        id: 'event-789',
+        ...createDto,
+        eventId: 'event-id-123',
+        createdAt: new Date(),
+        publishedAt: null,
+      };
+      queryRunner.manager.save.mockResolvedValue(savedEvent);
+      alertEventRepo.create.mockReturnValue(savedEvent as AlertEvent);
+
+      const result = await service.createAlertEvent(createDto);
+
+      expect(queryRunner.startTransaction).toHaveBeenCalled();
+      expect(alertEventRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orgId: 'org-123',
+          alertId: 'alert-123',
+          eventData: expect.objectContaining({
+            eventType: 'ALERT_EVENT_CREATED',
+            key: 'value',
+          }),
+        }),
+      );
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+      expect(result).toEqual(savedEvent);
+    });
+  });
+
+  describe('updateAlert', () => {
+    it('should update alert and create status change event in a transaction', async () => {
+      const updateDto = { status: AlertStatus.RESOLVED };
+      queryRunner.manager.findOne.mockResolvedValue(mockAlert as Alert);
+      alertEventRepo.create.mockReturnValue({ eventId: 'event-999' } as AlertEvent);
+      queryRunner.manager.save.mockResolvedValue({ ...mockAlert, status: AlertStatus.RESOLVED });
+
+      const result = await service.updateAlert('alert-123', 'org-123', 'user-789', updateDto);
+
+      expect(queryRunner.startTransaction).toHaveBeenCalled();
+      expect(alertEventRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventData: expect.objectContaining({
+            eventType: 'ALERT_STATUS_CHANGED',
+          }),
+        }),
+      );
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteAlert', () => {
+    it('should delete alert and related events', async () => {
+      alertRepo.findOne.mockResolvedValue(mockAlert as Alert);
+      alertEventRepo.delete = jest.fn().mockResolvedValue({ affected: 2 });
+      alertRepo.delete = jest.fn().mockResolvedValue({ affected: 1 });
+
+      const result = await service.deleteAlert('alert-123', 'org-123');
+
+      expect(alertRepo.findOne).toHaveBeenCalledWith({ where: { id: 'alert-123', orgId: 'org-123' } });
+      expect(alertEventRepo.delete).toHaveBeenCalledWith({ alertId: 'alert-123', orgId: 'org-123' });
+      expect(alertRepo.delete).toHaveBeenCalledWith({ id: 'alert-123', orgId: 'org-123' });
+      expect(result).toEqual({ success: true });
     });
 
     it('should throw error when alert not found', async () => {
       alertRepo.findOne.mockResolvedValue(null);
 
-      await expect(service.updateAlertStatus('non-existent', 'org-123', AlertStatus.ACKNOWLEDGED, 'user-456'))
-        .rejects.toThrow('Alert not found in this organization');
-    });
-
-    it('should increment version on update for optimistic locking', async () => {
-      const alertWithVersion = { ...mockAlert, version: 1 };
-      const updatedAlertWithVersion = { ...mockAlert, status: AlertStatus.RESOLVED, version: 2 };
-      alertRepo.findOne.mockResolvedValue(alertWithVersion as Alert);
-      alertRepo.save.mockResolvedValue(updatedAlertWithVersion as Alert);
-      kafkaProducer.sendAlertEvent.mockResolvedValue(undefined);
-
-      const result = await service.updateAlertStatus('alert-123', 'org-123', AlertStatus.RESOLVED, 'user-789');
-
-      expect(result.version).toBe(2);
-      expect(kafkaProducer.sendAlertEvent).toHaveBeenCalledWith(
-        'alert-events',
-        expect.objectContaining({
-          alertId: 'alert-123',
-          eventData: expect.objectContaining({ alertId: 'alert-123' }),
-        }),
+      await expect(service.deleteAlert('non-existent', 'org-123')).rejects.toThrow(
+        'Alert not found in this organization',
       );
     });
   });

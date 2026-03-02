@@ -99,12 +99,17 @@ export class EventPersistenceService implements OnModuleInit, OnModuleDestroy {
       }
 
       // Save alert event to database
+      // Extract eventData from the flattened Kafka message
+      // (Kafka producer spreads event.eventData properties at top level)
+      // Remove metadata fields, keep only event-specific fields
+      const { orgId: messageOrgId, alertId: messageAlertId, eventId: messageEventId, createdBy: messageCreatedBy, createdAt: messageCreatedAt, ...reconstructedEventData } = eventData;
+
       const event = this.alertEventRepo.create({
-        orgId: eventData.orgId,
-        alertId: eventData.alertId || eventData.eventData?.alertId,
-        eventId: eventData.eventId,
-        eventData: eventData.eventData,
-        createdBy: eventData.createdBy,
+        orgId: messageOrgId,
+        alertId: messageAlertId,
+        eventId: messageEventId,
+        eventData: reconstructedEventData,
+        createdBy: messageCreatedBy,
       });
 
       await this.alertEventRepo.save(event);
