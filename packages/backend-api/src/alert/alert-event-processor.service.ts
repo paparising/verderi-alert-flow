@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@videri/shared';
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
@@ -49,8 +49,9 @@ export class AlertEventProcessorService implements OnModuleInit, OnModuleDestroy
   }
 
   /**
-   * Periodically poll and process alert events
-   * Uses ProcessedEvent table for idempotency - only publishes each event once
+   * Periodically poll and process alert events using Transactional Outbox Pattern
+   * Only fetches unpublished events (published = false)
+   * Marks events as published atomically with ProcessedEvent to ensure at-least-once delivery
    */
   async processEvents() {
     if (this.isProcessing) {
@@ -59,99 +60,18 @@ export class AlertEventProcessorService implements OnModuleInit, OnModuleDestroy
 
     this.isProcessing = true;
     try {
-      // Fetch all alert events
-      const allEvents = await this.alertEventRepo.find({
-        order: {
-          createdAt: 'ASC',
-        },
-        take: 100,
-      });
+      const unpublishedEvents = await this.getUnpublishedEvents(100);
 
-      if (allEvents.length === 0) {
+      if (unpublishedEvents.length === 0) {
         return;
       }
 
-      this.logger.debug(`Found ${allEvents.length} alert events to check for publishing`);
+      this.logger.log(
+        `Found ${unpublishedEvents.length} unpublished events to publish to Kafka`,
+      );
 
-      for (const event of allEvents) {
-        // Check if this event has already been processed successfully
-        const existingProcessedEvent = await this.processedEventRepo.findOne({
-          where: { eventId: event.eventId },
-        });
-
-        if (existingProcessedEvent?.status === ProcessingStatus.COMPLETED) {
-          this.logger.debug(`Event ${event.eventId} already published, skipping`);
-          continue;
-        }
-
-        const queryRunner = this.dataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-
-        let processedEvent = existingProcessedEvent || await queryRunner.manager.create(ProcessedEvent, {
-          eventId: event.eventId,
-          status: ProcessingStatus.PROCESSING,
-        });
-
-        try {
-          // Prepare event data for Kafka
-          const kafkaEventData = {
-            orgId: event.orgId,
-            alertId: event.alertId,
-            eventId: event.eventId,
-            ...event.eventData,
-            createdBy: event.createdBy,
-            createdAt: event.createdAt.toISOString(),
-          };
-
-          // Publish to Kafka
-          await this.kafkaProducer.sendAlertEvent('alert-events', kafkaEventData);
-
-          // Mark as completed in ProcessedEvent table
-          processedEvent.status = ProcessingStatus.COMPLETED;
-          processedEvent.completedAt = new Date();
-          
-          if (existingProcessedEvent) {
-            await queryRunner.manager.update(
-              ProcessedEvent,
-              { id: processedEvent.id },
-              { status: ProcessingStatus.COMPLETED, completedAt: new Date() }
-            );
-          } else {
-            await queryRunner.manager.save(processedEvent);
-          }
-
-          await queryRunner.commitTransaction();
-          this.logger.debug(`Published event ${event.eventId} to Kafka`);
-        } catch (error) {
-          await queryRunner.rollbackTransaction();
-          
-          // Update ProcessedEvent with error status
-          const errorQueryRunner = this.dataSource.createQueryRunner();
-          await errorQueryRunner.connect();
-          try {
-            if (existingProcessedEvent) {
-              await errorQueryRunner.manager.update(
-                ProcessedEvent,
-                { id: processedEvent.id },
-                { status: ProcessingStatus.FAILED, errorMessage: error.message }
-              );
-            } else {
-              processedEvent.status = ProcessingStatus.FAILED;
-              processedEvent.errorMessage = error.message;
-              await errorQueryRunner.manager.save(processedEvent);
-            }
-          } finally {
-            await errorQueryRunner.release();
-          }
-
-          this.logger.error(
-            `Failed to process event ${event.eventId}: ${error.message}`,
-            error.stack,
-          );
-        } finally {
-          await queryRunner.release();
-        }
+      for (const event of unpublishedEvents) {
+        await this.processSingleEvent(event, true, 'Successfully published', 'Failed to publish');
       }
     } catch (error) {
       this.logger.error(`Error during event processing: ${error.message}`, error.stack);
@@ -164,123 +84,183 @@ export class AlertEventProcessorService implements OnModuleInit, OnModuleDestroy
    * Get the count of events not yet published to Kafka
    * Checks ProcessedEvent table for completion status
    */
+  /**
+   * Get unpublished events count (for monitoring)
+   * Uses the published flag from Transactional Outbox Pattern
+   */
   async getUnpublishedEventCount(): Promise<number> {
-    const totalEvents = await this.alertEventRepo.count();
-    const publishedEvents = await this.processedEventRepo.count({
+    return this.alertEventRepo.count({
       where: {
-        status: ProcessingStatus.COMPLETED,
+        published: false,
       },
     });
-    return totalEvents - publishedEvents;
   }
 
   /**
    * Get unpublished events for a specific alert
-   * Checks against ProcessedEvent table
+   * Uses the published flag for efficient querying
    */
   async getUnpublishedEventsByAlert(alertId: string, orgId: string): Promise<AlertEvent[]> {
-    // Get all events for this alert
-    const allEvents = await this.alertEventRepo.find({
+    return this.alertEventRepo.find({
       where: {
         alertId,
         orgId,
+        published: false,
       },
       order: {
         createdAt: 'ASC',
       },
     });
+  }
 
-    // Filter out events that have been published
-    const unpublishedEvents: AlertEvent[] = [];
-    for (const event of allEvents) {
-      const processedEvent = await this.processedEventRepo.findOne({
-        where: {
-          eventId: event.eventId,
-          status: ProcessingStatus.COMPLETED,
-        },
-      });
-      if (!processedEvent) {
-        unpublishedEvents.push(event);
-      }
-    }
-
-    return unpublishedEvents;
+  /**
+   * Get events with failed publish attempts (for monitoring/alerting)
+   */
+  async getFailedPublishEvents(maxAttempts: number = 5): Promise<AlertEvent[]> {
+    return this.alertEventRepo
+      .createQueryBuilder('event')
+      .where('event.published = :published', { published: false })
+      .andWhere('event.publishAttempts >= :maxAttempts', { maxAttempts })
+      .orderBy('event.createdAt', 'ASC')
+      .getMany();
   }
 
   /**
    * Manually trigger event processing (useful for testing/admin operations)
-   * Uses ProcessedEvent idempotency tracking
+   * Processes only unpublished events using Transactional Outbox Pattern
    */
   async manuallyProcessEvents(): Promise<number> {
-    const allEvents = await this.alertEventRepo.find({
-      order: {
-        createdAt: 'ASC',
-      },
-    });
+    const unpublishedEvents = await this.getUnpublishedEvents();
 
     let processedCount = 0;
 
-    for (const event of allEvents) {
-      // Check if already processed
-      const existingProcessedEvent = await this.processedEventRepo.findOne({
-        where: { eventId: event.eventId },
-      });
+    for (const event of unpublishedEvents) {
+      const published = await this.processSingleEvent(
+        event,
+        false,
+        'Manually published',
+        'Failed to manually process',
+      );
 
-      if (existingProcessedEvent?.status === ProcessingStatus.COMPLETED) {
-        this.logger.debug(`Event ${event.eventId} already published, skipping`);
-        continue;
-      }
-
-      const queryRunner = this.dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-      
-      try {
-        let processedEvent = existingProcessedEvent || await queryRunner.manager.create(ProcessedEvent, {
-          eventId: event.eventId,
-          status: ProcessingStatus.PROCESSING,
-        });
-
-        const kafkaEventData = {
-          orgId: event.orgId,
-          alertId: event.alertId,
-          eventId: event.eventId,
-          ...event.eventData,
-          createdBy: event.createdBy,
-          createdAt: event.createdAt.toISOString(),
-        };
-
-        await this.kafkaProducer.sendAlertEvent('alert-events', kafkaEventData);
-        
-        // Mark as completed
-        processedEvent.status = ProcessingStatus.COMPLETED;
-        processedEvent.completedAt = new Date();
-        
-        if (existingProcessedEvent) {
-          await queryRunner.manager.update(
-            ProcessedEvent,
-            { id: processedEvent.id },
-            { status: ProcessingStatus.COMPLETED, completedAt: new Date() }
-          );
-        } else {
-          await queryRunner.manager.save(processedEvent);
-        }
-        
-        await queryRunner.commitTransaction();
+      if (published) {
         processedCount++;
-        this.logger.debug(`Manually published event ${event.eventId}`);
-      } catch (error) {
-        await queryRunner.rollbackTransaction();
-        this.logger.error(
-          `Failed to manually process event ${event.eventId}: ${error.message}`,
-          error.stack,
-        );
-      } finally {
-        await queryRunner.release();
       }
     }
 
     this.logger.log(`Successfully processed ${processedCount} events manually`);
     return processedCount;
+  }
+
+  private async getUnpublishedEvents(limit?: number): Promise<AlertEvent[]> {
+    return this.alertEventRepo.find({
+      where: {
+        published: false,
+      },
+      order: {
+        createdAt: 'ASC',
+      },
+      take: limit,
+    });
+  }
+
+  private buildKafkaEventData(event: AlertEvent) {
+    return {
+      orgId: event.orgId,
+      alertId: event.alertId,
+      eventId: event.eventId,
+      ...event.eventData,
+      createdBy: event.createdBy,
+      createdAt: event.createdAt.toISOString(),
+    };
+  }
+
+  private async sendEventToKafka(event: AlertEvent): Promise<void> {
+    const kafkaEventData = this.buildKafkaEventData(event);
+    await this.kafkaProducer.sendAlertEvent('alert-events', kafkaEventData);
+  }
+
+  private async markEventAsPublished(
+    manager: EntityManager,
+    event: AlertEvent,
+    publishedAt: Date,
+  ): Promise<void> {
+    await manager.update(
+      AlertEvent,
+      { id: event.id },
+      {
+        published: true,
+        publishedAt,
+        publishAttempts: event.publishAttempts + 1,
+        lastPublishError: null,
+      },
+    );
+  }
+
+  private async ensureProcessedEventRecord(
+    manager: EntityManager,
+    event: AlertEvent,
+  ): Promise<void> {
+    const existingProcessedEvent = await manager.findOne(ProcessedEvent, {
+      where: { eventId: event.eventId },
+    });
+
+    if (!existingProcessedEvent) {
+      const processedEvent = manager.create(ProcessedEvent, {
+        eventId: event.eventId,
+        status: ProcessingStatus.COMPLETED,
+        completedAt: new Date(),
+      });
+      await manager.save(processedEvent);
+    }
+  }
+
+  private async updatePublishFailureMetrics(event: AlertEvent, error: any): Promise<void> {
+    const errorQueryRunner = this.dataSource.createQueryRunner();
+    await errorQueryRunner.connect();
+    try {
+      await errorQueryRunner.manager.update(
+        AlertEvent,
+        { id: event.id },
+        {
+          publishAttempts: event.publishAttempts + 1,
+          lastPublishError: error.message?.substring(0, 500),
+        },
+      );
+    } catch (updateError) {
+      this.logger.error(
+        `Failed to update publish attempts for event ${event.eventId}: ${updateError.message}`,
+      );
+    } finally {
+      await errorQueryRunner.release();
+    }
+  }
+
+  private async processSingleEvent(
+    event: AlertEvent,
+    trackFailureMetrics: boolean,
+    successPrefix: string,
+    failurePrefix: string,
+  ): Promise<boolean> {
+    try {
+      // Publish first; only mark published if Kafka send succeeds.
+      await this.sendEventToKafka(event);
+      await this.dataSource.transaction(async manager => {
+        await this.markEventAsPublished(manager, event, new Date());
+        await this.ensureProcessedEventRecord(manager, event);
+      });
+
+      this.logger.log(`${successPrefix} event ${event.eventId} (attempt ${event.publishAttempts + 1})`);
+      return true;
+    } catch (error) {
+      if (trackFailureMetrics) {
+        await this.updatePublishFailureMetrics(event, error);
+      }
+
+      this.logger.error(
+        `${failurePrefix} event ${event.eventId} (attempt ${event.publishAttempts + 1}): ${error.message}`,
+        error.stack,
+      );
+      return false;
+    }
   }
 }

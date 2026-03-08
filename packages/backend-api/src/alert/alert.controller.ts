@@ -1,11 +1,15 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { AlertService } from './alert.service';
+import { AlertEventProcessorService } from './alert-event-processor.service';
 import { CreateAlertDto, UpdateAlertDto, UpdateAlertStatusDto } from '@videri/shared';
 import { Roles } from '../decorators';
 
 @Controller('alerts')
 export class AlertController {
-  constructor(private readonly alertService: AlertService) {}
+  constructor(
+    private readonly alertService: AlertService,
+    private readonly alertEventProcessorService: AlertEventProcessorService,
+  ) {}
 
   @Roles('admin', 'user')
   @Post()
@@ -64,5 +68,82 @@ export class AlertController {
   ) {
     const effectiveOrgId = req?.user?.orgId || orgId;
     return this.alertService.getAlertEventsByAlert(alertId, effectiveOrgId);
+  }
+
+  // ==================== MONITORING ENDPOINTS ====================
+  // These endpoints help monitor the Transactional Outbox Pattern
+
+  /**
+   * Get count of unpublished events (events waiting to be published to Kafka)
+   * High count indicates processor falling behind or Kafka issues
+   */
+  @Roles('admin')
+  @Get('_internal/unpublished-count')
+  async getUnpublishedEventCount() {
+    const count = await this.alertEventProcessorService.getUnpublishedEventCount();
+    return { 
+      count,
+      message: count > 100 ? 'WARNING: High unpublished event count' : 'OK',
+    };
+  }
+
+  /**
+   * Get events that failed to publish after multiple attempts
+   * Useful for identifying persistent Kafka connection issues
+   */
+  @Roles('admin')
+  @Get('_internal/failed-publishes')
+  async getFailedPublishes(@Query('maxAttempts') maxAttempts?: string) {
+    const max = parseInt(maxAttempts || '5', 10);
+    const events = await this.alertEventProcessorService.getFailedPublishEvents(max);
+    return {
+      count: events.length,
+      events: events.map(e => ({
+        eventId: e.eventId,
+        alertId: e.alertId,
+        createdAt: e.createdAt,
+        publishAttempts: e.publishAttempts,
+        lastPublishError: e.lastPublishError,
+      })),
+    };
+  }
+
+  /**
+   * Get unpublished events for a specific alert
+   * Useful for debugging why specific alerts aren't being processed
+   */
+  @Roles('admin', 'user')
+  @Get(':id/unpublished-events')
+  async getUnpublishedEventsForAlert(
+    @Param('id') alertId: string,
+    @Req() req: any,
+  ) {
+    const events = await this.alertEventProcessorService.getUnpublishedEventsByAlert(
+      alertId,
+      req.user.orgId,
+    );
+    return {
+      count: events.length,
+      events: events.map(e => ({
+        eventId: e.eventId,
+        createdAt: e.createdAt,
+        publishAttempts: e.publishAttempts,
+        lastPublishError: e.lastPublishError,
+      })),
+    };
+  }
+
+  /**
+   * Manually trigger event processing (useful for testing or recovery)
+   * Processes all unpublished events immediately
+   */
+  @Roles('admin')
+  @Post('_internal/reprocess-events')
+  async manuallyReprocessEvents() {
+    const count = await this.alertEventProcessorService.manuallyProcessEvents();
+    return {
+      processed: count,
+      message: `Successfully processed ${count} unpublished events`,
+    };
   }
 }
