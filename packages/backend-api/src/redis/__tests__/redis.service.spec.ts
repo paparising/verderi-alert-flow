@@ -23,14 +23,6 @@ const mockRedisClient = {
   zcard: jest.fn().mockResolvedValue(5),
 };
 
-jest.mock('ioredis', () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => mockRedisClient),
-  };
-});
-
-// Import AFTER mock is set up
 import { RedisService } from '../redis.service';
 
 describe('RedisService', () => {
@@ -55,8 +47,8 @@ describe('RedisService', () => {
 
     service = module.get<RedisService>(RedisService);
 
-    // Manually trigger onModuleInit
-    service.onModuleInit();
+    // Inject mock client directly to keep tests deterministic.
+    (service as any).client = mockRedisClient;
   });
 
   it('should be defined', () => {

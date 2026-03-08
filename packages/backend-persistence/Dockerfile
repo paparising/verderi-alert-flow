@@ -41,4 +41,4 @@ COPY --from=builder /app/packages/backend-persistence/package*.json ./
 COPY --from=builder /app/packages/backend-persistence/dist ./dist
 RUN npm install --omit=dev
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/main.bundle.js"]

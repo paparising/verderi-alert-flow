@@ -3,15 +3,17 @@
   "version": "1.0.0",
   "description": "Videri Alert Flow Notification Service",
   "scripts": {
-    "build": "nest build",
+    "build": "npm run build:tsc && npm run build:bundle",
+    "build:tsc": "node -e \"require('fs').rmSync('dist',{ recursive: true, force: true })\" && tsc -p tsconfig.json",
+    "build:bundle": "esbuild dist/main.js --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/main.bundle.js",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/main.bundle.js",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test": "npm run build:tsc && vitest run --config vitest.config.ts",
+    "test:watch": "npm run build:tsc && vitest --config vitest.config.ts --watch",
+    "test:cov": "npm run build:tsc && vitest run --config vitest.config.ts --coverage"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -35,6 +37,9 @@
     "@types/node": "^22.10.7",
     "jest": "^30.0.0",
     "prettier": "^3.4.2",
+    "vitest": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "esbuild": "^0.25.1",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"

@@ -41,4 +41,4 @@ COPY --from=builder /app/packages/backend-notification/package*.json ./
 COPY --from=builder /app/packages/backend-notification/dist ./dist
 RUN npm install --omit=dev
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/main.bundle.js"]

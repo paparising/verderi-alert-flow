@@ -4,7 +4,7 @@ import { AlertsListEnhanced } from './AlertsList.example';
 import { useAlertSocket } from '../hooks/useAlertSocket';
 
 // Mock the socket hook
-jest.mock('../hooks/useAlertSocket', () => ({
+vi.mock('../hooks/useAlertSocket', () => ({
   __esModule: true,
   useAlertSocket: jest.fn(),
 }));

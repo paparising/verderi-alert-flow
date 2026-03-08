@@ -22,7 +22,7 @@
     "test:persistence": "npm run test --workspace=@videri/backend-persistence",
     "test:notification": "npm run test --workspace=@videri/backend-notification",
     "test:frontend": "npm run test --workspace=frontend",
-    "test:all": "npm run test:api && npm run test:persistence && npm run test:notification",
+    "test:all": "npm run build:shared && npm run test:api && npm run test:persistence && npm run test:notification && npm run test:frontend",
     "test": "npm run test:all",
     "build:frontend": "npm run build --workspace=frontend",
     "test:cov": "npm run test:api -- --coverage && npm run test:persistence -- --coverage && npm run test:notification -- --coverage",

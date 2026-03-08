@@ -325,7 +325,7 @@ expect(service.canExecute(key)).toBe(false);
 expect(service.getMetrics(key).state).toBe(CircuitBreakerState.OPEN);
 
 // Recovery transition
-jest.advanceTimersByTime(61000);
+vi.advanceTimersByTime(61000);
 expect(service.canExecute(key)).toBe(true);
 expect(service.getMetrics(key).state).toBe(CircuitBreakerState.HALF_OPEN);
 
@@ -400,10 +400,10 @@ All tests run automatically on:
 ```yaml
 test:
   backend:
-    - jest --maxWorkers=2
+    - vitest run --maxWorkers=2
     - Coverage must be >80%
   frontend:
-    - jest --maxWorkers=2
+    - vitest run --maxWorkers=2
     - Coverage must be >80%
 ```
 
@@ -414,7 +414,7 @@ test:
 1. **Backend**: Add to corresponding `__tests__/*.spec.ts` file
 2. **Frontend**: Add to corresponding `.test.ts` or `.test.tsx` file
 3. **Pattern**: Describe block → it blocks with clear names
-4. **Mocking**: Use jest.mock() for dependencies
+4. **Mocking**: Prefer `vi.mock()` for dependencies
 5. **Cleanup**: Clear timers/mocks in beforeEach/afterEach
 
 ### Updating Tests
@@ -436,7 +436,7 @@ npm test -- api.test.ts
 npm test -- --testNamePattern="Circuit Breaker"
 
 # Debug mode
-node --inspect-brk node_modules/.bin/jest
+npx vitest run --inspect-brk
 
 # Verbose output
 npm test -- --verbose

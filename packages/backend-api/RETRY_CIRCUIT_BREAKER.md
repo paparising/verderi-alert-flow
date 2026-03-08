@@ -174,7 +174,7 @@ Example test for retry logic:
 ```typescript
 it("should retry on timeout", (done) => {
   // Mock service that times out first, then succeeds
-  jest
+  vi
     .spyOn(httpService, "get")
     .mockImplementationOnce(() => throwError(() => new TimeoutError()))
     .mockImplementationOnce(() => of({ data: "success" }));

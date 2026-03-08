@@ -322,7 +322,7 @@ expect(service.getMetrics(key).failures).toBe(5);
 ```typescript
 expect(mockHandler.handle).toHaveBeenCalledTimes(3);
 expect(attemptCount).toBe(2);
-jest.runAllTimers();
+vi.runAllTimers();
 ```
 
 ### Error Detection Assertions
@@ -399,7 +399,7 @@ npm test -- --ci --coverage
 ### Debugging
 
 ```bash
-node --inspect-brk node_modules/.bin/jest --runInBand
+npx vitest run --inspect-brk
 ```
 
 ## Next Steps

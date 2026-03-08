@@ -125,11 +125,11 @@ npm test -- --verbose
 ```bash
 # Backend
 cd packages/backend-api
-node --inspect-brk node_modules/.bin/jest --runInBand
+npx vitest run --config vitest.config.ts --inspect-brk
 
 # Frontend
 cd packages/frontend
-node --inspect-brk node_modules/.bin/jest --runInBand
+npx vitest run --config vitest.config.ts --inspect-brk
 ```
 
 Then open `chrome://inspect` in Chrome DevTools.
@@ -211,8 +211,8 @@ npm test -- --listTests
 ### Mock issues
 
 ```bash
-# Clear jest cache
-npm test -- --clearCache
+# Clear Vitest cache
+npx vitest --clearCache
 
 # Then rerun
 npm test

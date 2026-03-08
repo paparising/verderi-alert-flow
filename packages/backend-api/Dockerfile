@@ -42,4 +42,4 @@ COPY --from=builder /app/packages/backend-api/dist ./dist
 RUN npm install --omit=dev
 
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/main.bundle.js"]

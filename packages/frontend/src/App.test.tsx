@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
-jest.mock('./hooks/useAlertSocket', () => ({
+vi.mock('./hooks/useAlertSocket', () => ({
   __esModule: true,
   useAlertSocket: jest.fn(() => ({ isConnected: false, socket: null })),
 }));
