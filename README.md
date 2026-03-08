@@ -7,7 +7,7 @@ Event-driven alert management built with NestJS, React, Kafka, Postgres, and Web
 - **frontend** (`packages/frontend`): React + TypeScript served by Nginx.
 - **backend-api** (`packages/backend-api`): REST API, Kafka producer, auth/roles.
 - **backend-persistence** (`packages/backend-persistence`): Kafka consumer that persists alert events to Postgres.
-- **backend-notification** (`packages/backend-notification`): Kafka consumer + WebSocket server that emits real-time notifications.
+- **backend-notification** (`packages/backend-notification`): Kafka consumer + WebSocket server that emits real-time notifications and enforces JWT-based socket authentication.
 - **shared** (`packages/shared`): DTOs, entities, enums shared across services.
 
 Event flow: API writes/updates alerts → publishes to Kafka → persistence consumer stores history → notification consumer pushes real-time events via WebSockets.
@@ -23,7 +23,7 @@ Event-driven alert management built with NestJS, React, Kafka, PostgreSQL, and W
 - **frontend** (`packages/frontend`): React + TypeScript served by Nginx.
 - **backend-api** (`packages/backend-api`): REST API, Kafka producer, authentication and role enforcement (port 3001).
 - **backend-persistence** (`packages/backend-persistence`): Kafka consumer that persists alert events to Postgres.
-- **backend-notification** (`packages/backend-notification`): Kafka consumer + WebSocket server (Socket.IO) that emits real-time notifications (port 3002).
+- **backend-notification** (`packages/backend-notification`): Kafka consumer + WebSocket server (Socket.IO) with JWT socket authentication (port 3002).
 - **shared** (`packages/shared`): DTOs, entities and enums shared across services.
 
 Event flow: API writes/updates alerts → publishes to Kafka (`alert-events`) → persistence consumer stores history → notification consumer pushes real-time events via WebSockets.
@@ -64,6 +64,7 @@ Each package may include `.env.dev` and `.env.prod` files. Compose can read a ro
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME` - PostgreSQL connection
 - `KAFKA_BROKER` - Kafka broker address (default: `kafka:9092`)
 - `PORT`, `NODE_ENV` - Server port and environment
+- `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE` - JWT verification settings used by API and notification WebSocket auth
 - Frontend: `REACT_APP_API_URL`, `REACT_APP_WS_URL` - API and WebSocket URLs
 
 ### Event Processing Variables
@@ -170,7 +171,43 @@ The system implements a robust three-layer deduplication strategy to prevent sta
 ### WebSocket Real-time Updates
 
 - WebSocket gateway runs in `backend-notification` (port 3002)
-- Clients join organization-specific rooms
+- Clients must authenticate with JWT during socket handshake
+  - Preferred: `auth.token` in Socket.IO client options
+  - Also supported: `Authorization: Bearer <token>` header
+  - Required claims: `sub` and `orgId`
+- Unauthorized socket connections are disconnected immediately
+- Clients can only join their own organization room (`joinOrg` orgId must match JWT `orgId`)
+- Frontend example (`socket.io-client`):
+
+```ts
+import { io } from "socket.io-client";
+
+const token = localStorage.getItem("accessToken");
+const socket = io(process.env.REACT_APP_WS_URL || "http://localhost:3002", {
+  auth: {
+    token, // same JWT returned by /auth/login
+  },
+});
+
+socket.emit("joinOrg", user.orgId);
+
+socket.on("newAlert", (alert) => {
+  // handle new alert
+});
+```
+
+Common socket auth errors:
+
+- Missing token:
+  - Symptom: socket connects then disconnects immediately.
+  - Cause: no `auth.token` or `Authorization` header provided.
+- Expired/invalid token:
+  - Symptom: immediate disconnect and no room join.
+  - Cause: JWT verification failure (signature, issuer, audience, or expiration).
+- Wrong organization join:
+  - Symptom: `joinOrg` returns `{ success: false, message: 'Forbidden organization access' }`.
+  - Cause: requested org ID does not match JWT `orgId` claim.
+
 - Events emitted:
   - `newAlert` - new alert created (eventType: `ALERT_CREATED`)
   - `alertStatusUpdate` - status changed (eventType: `ALERT_STATUS_CHANGED`)
@@ -260,6 +297,8 @@ Included scopes:
 - **API → DB**: Confirm `DB_HOST` is reachable (`db` in-compose) or use mapped host port (5438).
 - **Kafka consumers idle**: Verify `KAFKA_BROKER` and consumer groups inside the Kafka container; check offset commits are working.
 - **WebSocket not updating**: Ensure `REACT_APP_WS_URL` matches notification service; check backend-notification logs for client connections and event emissions; verify organization IDs match between alert and client.
+- **Socket auth failures/disconnects**: Verify JWT is provided in handshake (`auth.token` or `Authorization` header), token signature uses the same `JWT_SECRET`, and claims include valid `sub` and `orgId`.
+- **Forbidden organization access**: `joinOrg` only allows the org in the authenticated JWT. Do not request a different org room.
 - **Status badges flashing**: Indicates duplicate events reaching frontend. Check notification service deduplication Map (2-second window) and ProcessedEvent table for proper status tracking.
 
 ### Database

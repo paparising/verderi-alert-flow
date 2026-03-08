@@ -6,6 +6,7 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { WsAuthService, WsUser } from './auth/ws-auth.service';
 
 @WebSocketGateway({
   cors: {
@@ -13,13 +14,23 @@ import { Server, Socket } from 'socket.io';
   },
 })
 export class AlertGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  constructor(private readonly wsAuthService: WsAuthService) {}
+
   @WebSocketServer()
   server: Server;
 
   private readonly orgRooms = new Map<string, Set<string>>();
 
-  handleConnection(client: Socket) {
-    console.log(`[Alert Gateway] Client connected: ${client.id}`);
+  async handleConnection(client: Socket) {
+    try {
+      const user = await this.wsAuthService.authenticateClient(client);
+      (client as any).data = (client as any).data ?? {};
+      (client.data as { user?: WsUser }).user = user;
+      console.log(`[Alert Gateway] Client connected: ${client.id} (org=${user.orgId})`);
+    } catch {
+      console.warn(`[Alert Gateway] Unauthorized connection rejected: ${client.id}`);
+      client.disconnect(true);
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -35,6 +46,18 @@ export class AlertGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('joinOrg')
   handleJoinOrg(client: Socket, orgId: string) {
+    (client as any).data = (client as any).data ?? {};
+    const user = (client.data as { user?: WsUser }).user;
+    if (!user) {
+      client.disconnect(true);
+      return { success: false, message: 'Unauthorized' };
+    }
+
+    if (orgId !== user.orgId) {
+      console.warn(`[Alert Gateway] Forbidden org join attempt: client=${client.id} targetOrg=${orgId} userOrg=${user.orgId}`);
+      return { success: false, message: 'Forbidden organization access' };
+    }
+
     client.join(`org:${orgId}`);
     
     if (!this.orgRooms.has(orgId)) {

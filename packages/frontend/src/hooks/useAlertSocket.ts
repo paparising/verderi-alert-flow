@@ -31,6 +31,7 @@ export interface AlertEvent {
 
 interface UseAlertSocketProps {
   orgId: string;
+  token?: string;
   onNewAlert?: (alert: Alert) => void;
   onAlertStatusUpdate?: (alert: Alert) => void;
   onAlertEvent?: (event: AlertEvent) => void;
@@ -38,6 +39,7 @@ interface UseAlertSocketProps {
 
 export const useAlertSocket = ({
   orgId,
+  token,
   onNewAlert,
   onAlertStatusUpdate,
   onAlertEvent,
@@ -49,6 +51,11 @@ export const useAlertSocket = ({
     // Initialize socket connection
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
+      auth: token
+        ? {
+            token,
+          }
+        : undefined,
     });
 
     socketRef.current = socket;
@@ -65,6 +72,11 @@ export const useAlertSocket = ({
 
     socket.on('disconnect', () => {
       console.log('WebSocket disconnected');
+      setIsConnected(false);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('WebSocket connection error:', err?.message || err);
       setIsConnected(false);
     });
 
@@ -92,7 +104,7 @@ export const useAlertSocket = ({
         socket.disconnect();
       }
     };
-  }, [orgId, onNewAlert, onAlertStatusUpdate, onAlertEvent]);
+  }, [orgId, token, onNewAlert, onAlertStatusUpdate, onAlertEvent]);
 
   return {
     socket: socketRef.current,

@@ -90,6 +90,7 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
 
   const { isConnected } = useAlertSocket({
     orgId,
+    token,
     onNewAlert: handleNewAlert,
     onAlertStatusUpdate: handleAlertStatusUpdate,
     onAlertEvent: handleAlertEvent,

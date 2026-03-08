@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { EventNotificationService } from './notification.service';
 import { AlertGateway } from './alert.gateway';
-import { parseLogLevels } from '@videri/shared';
+import { WsAuthService } from './auth/ws-auth.service';
+import { parseLogLevels } from './logging/logging.config';
 
 @Module({
   imports: [
@@ -12,8 +14,9 @@ import { parseLogLevels } from '@videri/shared';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    JwtModule.register({}),
   ],
-  providers: [EventNotificationService, AlertGateway],
+  providers: [EventNotificationService, AlertGateway, WsAuthService],
 })
 class NotificationModule {}
 

@@ -204,6 +204,7 @@ export const AlertsListEnhanced: React.FC<AlertsListProps> = ({ orgId, apiUrl, t
 
   const { isConnected } = useAlertSocket({
     orgId,
+    token,
     onNewAlert: (alert) => {
       setState((prev) => ({
         ...prev,
