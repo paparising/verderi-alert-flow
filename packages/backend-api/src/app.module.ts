@@ -31,7 +31,7 @@ import { HttpExceptionFilter } from '@videri/shared';
       password: process.env.DB_PASS || 'password',
       database: process.env.DB_NAME || 'videri',
       entities: [Organization, User, Alert, AlertEvent, ProcessedEvent],
-      synchronize: true,
+      synchronize: process.env.DB_SYNCHRONIZE ? process.env.DB_SYNCHRONIZE === 'true' : true,
     }),
     RedisModule,
     OrganizationModule,

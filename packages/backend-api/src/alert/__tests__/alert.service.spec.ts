@@ -45,7 +45,10 @@ describe('AlertService', () => {
         where: vi.fn().mockReturnThis(),
         andWhere: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        take: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue([mockAlert]),
+        getManyAndCount: vi.fn().mockResolvedValue([[mockAlert], 1]),
       })),
     };
 
@@ -149,13 +152,43 @@ describe('AlertService', () => {
         where: vi.fn().mockReturnThis(),
         andWhere: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        take: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue([mockAlert]),
+        getManyAndCount: vi.fn().mockResolvedValue([[mockAlert], 1]),
       };
       alertRepo.createQueryBuilder.mockReturnValue(queryBuilder as any);
 
       await service.getAlertsByOrg('org-123', AlertStatus.NEW);
 
       expect(queryBuilder.andWhere).toHaveBeenCalledWith('alert.status = :status', { status: AlertStatus.NEW });
+    });
+
+    it('should return paginated results with metadata', async () => {
+      const queryBuilder = {
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        take: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([mockAlert]),
+        getManyAndCount: vi.fn().mockResolvedValue([[mockAlert], 23]),
+      };
+      alertRepo.createQueryBuilder.mockReturnValue(queryBuilder as any);
+
+      const result = await service.getAlertsByOrgAndCreatorPaginated('org-123', AlertStatus.NEW, 'user-1', 2, 5);
+
+      expect(queryBuilder.skip).toHaveBeenCalledWith(5);
+      expect(queryBuilder.take).toHaveBeenCalledWith(5);
+      expect(result).toEqual({
+        data: [mockAlert],
+        pagination: {
+          page: 2,
+          pageSize: 5,
+          total: 23,
+          totalPages: 5,
+        },
+      });
     });
   });
 

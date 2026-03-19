@@ -8,6 +8,18 @@ interface AlertsListProps {
   token: string;
 }
 
+interface AlertsPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+interface AlertsListResponse {
+  data: Alert[];
+  pagination: AlertsPagination;
+}
+
 type StatusFilter = '' | 'New' | 'Acknowledged' | 'Resolved';
 const STATUS_OPTIONS: StatusFilter[] = ['', 'New', 'Acknowledged', 'Resolved'];
 const PAGE_SIZE_OPTIONS = [5, 10, 20];
@@ -26,6 +38,13 @@ const formatStatusLabel = (status: string) => {
 
 export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [usesBackendPagination, setUsesBackendPagination] = useState(false);
+  const [pagination, setPagination] = useState<AlertsPagination>({
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 1,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
@@ -116,6 +135,8 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
         if (mineOnly) {
           url.searchParams.set('mine', 'true');
         }
+        url.searchParams.set('page', String(page));
+        url.searchParams.set('pageSize', String(pageSize));
 
         const res = await fetch(url.toString(), {
           headers: {
@@ -130,9 +151,24 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
           throw new Error((body as any)?.message || 'Failed to load alerts');
         }
 
-        const data: Alert[] = await res.json();
-        setAlerts(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-        setPage(1);
+        const body: Alert[] | AlertsListResponse = await res.json();
+
+        if (Array.isArray(body)) {
+          const sorted = body.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setAlerts(sorted);
+          setUsesBackendPagination(false);
+          setPagination({
+            page,
+            pageSize,
+            total: sorted.length,
+            totalPages: Math.max(1, Math.ceil(sorted.length / pageSize)),
+          });
+        } else {
+          const sorted = body.data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setAlerts(sorted);
+          setUsesBackendPagination(true);
+          setPagination(body.pagination);
+        }
       } catch (err: any) {
         if (err.name === 'AbortError') return;
         setError(err?.message || 'Error loading alerts');
@@ -143,7 +179,7 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
 
     load();
     return () => controller.abort();
-  }, [apiUrl, mineOnly, orgId, statusFilter, token]);
+  }, [apiUrl, mineOnly, orgId, page, pageSize, statusFilter, token]);
 
   const openDetails = async (alert: Alert) => {
     setDetailAlert(alert);
@@ -188,12 +224,17 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
     );
   }, [alerts, searchTerm]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredAlerts.length / pageSize)), [filteredAlerts.length, pageSize]);
+  const totalPages = usesBackendPagination
+    ? pagination.totalPages
+    : Math.max(1, Math.ceil(filteredAlerts.length / pageSize));
 
-  const pagedAlerts = useMemo(() => {
+  const displayedAlerts = useMemo(() => {
+    if (usesBackendPagination) {
+      return filteredAlerts.slice(0, pageSize);
+    }
     const start = (page - 1) * pageSize;
     return filteredAlerts.slice(start, start + pageSize);
-  }, [filteredAlerts, page, pageSize]);
+  }, [filteredAlerts, page, pageSize, usesBackendPagination]);
 
   useEffect(() => {
     setPage(1);
@@ -368,16 +409,16 @@ export const AlertsList: React.FC<AlertsListProps> = ({ orgId, apiUrl, token }) 
       {loading && <div className="inline-message">Loading alerts…</div>}
       {error && <div className="inline-message error">{error}</div>}
 
-      {!loading && alerts.length === 0 && !error && (
+      {!loading && displayedAlerts.length === 0 && !error && (
         <div className="no-alerts">
           <p>No alerts yet. Waiting for new alerts…</p>
         </div>
       )}
 
-      {!loading && alerts.length > 0 && (
+      {!loading && displayedAlerts.length > 0 && (
         <>
           <div className="alerts-list">
-            {pagedAlerts.map((alert) => {
+            {displayedAlerts.map((alert) => {
               const isEditing = selectedAlert?.id === alert.id;
               return (
                 <div

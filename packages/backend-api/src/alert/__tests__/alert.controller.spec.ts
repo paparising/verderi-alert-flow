@@ -11,6 +11,7 @@ describe('AlertController', () => {
     alertService = {
       createAlert: vi.fn(),
       getAlertsByOrgAndCreator: vi.fn(),
+      getAlertsByOrgAndCreatorPaginated: vi.fn(),
       updateAlertStatus: vi.fn(),
       updateAlert: vi.fn(),
       deleteAlert: vi.fn(),
@@ -52,7 +53,7 @@ describe('AlertController', () => {
       const expected = [{ id: 'a-1' }];
       alertService.getAlertsByOrgAndCreator.mockResolvedValue(expected as any);
 
-      const result = await controller.listAlerts('org-query', AlertStatus.NEW, 'true', req);
+      const result = await controller.listAlerts('org-query', AlertStatus.NEW, 'true', undefined, undefined, req);
 
       expect(alertService.getAlertsByOrgAndCreator).toHaveBeenCalledWith('org-auth', AlertStatus.NEW, 'user-auth');
       expect(result).toBe(expected);
@@ -61,9 +62,29 @@ describe('AlertController', () => {
     it('should fallback to query org when request user is missing', async () => {
       alertService.getAlertsByOrgAndCreator.mockResolvedValue([] as any);
 
-      await controller.listAlerts('org-query', undefined, undefined, undefined);
+      await controller.listAlerts('org-query', undefined, undefined, undefined, undefined, undefined);
 
       expect(alertService.getAlertsByOrgAndCreator).toHaveBeenCalledWith('org-query', undefined, undefined);
+    });
+
+    it('should use paginated service call when page or pageSize is provided', async () => {
+      const req = { user: { orgId: 'org-auth', userId: 'user-auth' } };
+      const expected = {
+        data: [{ id: 'a-1' }],
+        pagination: { page: 2, pageSize: 5, total: 11, totalPages: 3 },
+      };
+      alertService.getAlertsByOrgAndCreatorPaginated.mockResolvedValue(expected as any);
+
+      const result = await controller.listAlerts('org-query', AlertStatus.NEW, 'true', '2', '5', req);
+
+      expect(alertService.getAlertsByOrgAndCreatorPaginated).toHaveBeenCalledWith(
+        'org-auth',
+        AlertStatus.NEW,
+        'user-auth',
+        2,
+        5,
+      );
+      expect(result).toBe(expected);
     });
   });
 

@@ -5,6 +5,16 @@ import { Alert, AlertEvent, CreateAlertDto, CreateAlertEventDto, AlertStatus, Up
 import { KafkaProducerService } from '../kafka/kafka-producer.service';
 import { v4 as uuidv4 } from 'uuid';
 
+type AlertPageResult = {
+  data: Alert[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 @Injectable()
 export class AlertService {
   constructor(
@@ -75,6 +85,45 @@ export class AlertService {
     }
 
     return query.getMany();
+  }
+
+  async getAlertsByOrgAndCreatorPaginated(
+    orgId: string,
+    status?: string,
+    createdBy?: string,
+    page?: number,
+    pageSize?: number,
+  ): Promise<AlertPageResult> {
+    const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page as number)) : 1;
+    const safePageSize = Number.isFinite(pageSize) ? Math.min(100, Math.max(1, Math.floor(pageSize as number))) : 10;
+
+    const query = this.alertRepo
+      .createQueryBuilder('alert')
+      .where('alert.orgId = :orgId', { orgId })
+      .orderBy('alert.createdAt', 'DESC');
+
+    if (status) {
+      query.andWhere('alert.status = :status', { status });
+    }
+
+    if (createdBy) {
+      query.andWhere('alert.createdBy = :createdBy', { createdBy });
+    }
+
+    const [data, total] = await query
+      .skip((safePage - 1) * safePageSize)
+      .take(safePageSize)
+      .getManyAndCount();
+
+    return {
+      data,
+      pagination: {
+        page: safePage,
+        pageSize: safePageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / safePageSize)),
+      },
+    };
   }
 
   async updateAlertStatus(id: string, orgId: string, status: AlertStatus, updatedBy: string) {
