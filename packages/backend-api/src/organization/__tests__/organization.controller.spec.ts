@@ -3,10 +3,11 @@ import { OrganizationController } from '../organization.controller';
 import { OrganizationService } from '../organization.service';
 import { SuperAdminGuard } from '../../guards';
 import { ConfigService } from '@nestjs/config';
+import type { Mocked } from 'vitest';
 
 describe('OrganizationController', () => {
   let controller: OrganizationController;
-  let service: jest.Mocked<OrganizationService>;
+  let service: Mocked<OrganizationService>;
 
   const mockOrg = {
     id: 'org-123',
@@ -17,9 +18,9 @@ describe('OrganizationController', () => {
 
   beforeEach(async () => {
     const mockService = {
-      create: jest.fn(),
-      findAll: jest.fn(),
-      findOne: jest.fn(),
+      create: vi.fn(),
+      findAll: vi.fn(),
+      findOne: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -31,11 +32,11 @@ describe('OrganizationController', () => {
         },
         {
           provide: SuperAdminGuard,
-          useValue: { canActivate: jest.fn().mockReturnValue(true) },
+          useValue: { canActivate: vi.fn().mockReturnValue(true) },
         },
         {
           provide: ConfigService,
-          useValue: { get: jest.fn() },
+          useValue: { get: vi.fn() },
         },
       ],
     }).compile();
@@ -82,3 +83,6 @@ describe('OrganizationController', () => {
     });
   });
 });
+
+
+

@@ -4,24 +4,25 @@ import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { RateLimitGuard } from '../rate-limit.guard';
 import { RedisService } from '../../redis/redis.service';
+import type { Mocked } from 'vitest';
 
 describe('RateLimitGuard', () => {
   let guard: RateLimitGuard;
-  let redisService: jest.Mocked<RedisService>;
-  let configService: jest.Mocked<ConfigService>;
-  let reflector: jest.Mocked<Reflector>;
+  let redisService: Mocked<RedisService>;
+  let configService: Mocked<ConfigService>;
+  let reflector: Mocked<Reflector>;
 
   const mockRedisService = {
-    incrementSlidingWindow: jest.fn(),
-    getSlidingWindowCount: jest.fn(),
+    incrementSlidingWindow: vi.fn(),
+    getSlidingWindowCount: vi.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn().mockImplementation((key: string, defaultVal: any) => defaultVal),
+    get: vi.fn().mockImplementation((key: string, defaultVal: any) => defaultVal),
   };
 
   const mockReflector = {
-    get: jest.fn(),
+    get: vi.fn(),
   };
 
   const createMockExecutionContext = (overrides: any = {}): ExecutionContext => {
@@ -63,7 +64,7 @@ describe('RateLimitGuard', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -229,3 +230,6 @@ describe('RateLimitGuard', () => {
     });
   });
 });
+
+
+

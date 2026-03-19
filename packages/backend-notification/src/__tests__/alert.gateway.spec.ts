@@ -2,19 +2,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AlertGateway } from '../alert.gateway';
 import { Server, Socket } from 'socket.io';
 import { WsAuthService } from '../auth/ws-auth.service';
+import type { Mocked } from 'vitest';
 
 describe('AlertGateway', () => {
   let gateway: AlertGateway;
-  let wsAuthService: jest.Mocked<WsAuthService>;
+  let wsAuthService: Mocked<WsAuthService>;
 
   const mockServer = {
-    to: jest.fn().mockReturnThis(),
-    emit: jest.fn(),
+    to: vi.fn().mockReturnThis(),
+    emit: vi.fn(),
   };
 
   beforeEach(async () => {
     const mockWsAuthService = {
-      authenticateClient: jest.fn().mockResolvedValue({
+      authenticateClient: vi.fn().mockResolvedValue({
         userId: 'user-123',
         orgId: 'org-456',
         roles: ['user'],
@@ -38,7 +39,7 @@ describe('AlertGateway', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -48,7 +49,7 @@ describe('AlertGateway', () => {
   describe('handleConnection', () => {
     it('should authenticate and log client connection', async () => {
       const mockClient = { id: 'client-123' } as Socket;
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
       await gateway.handleConnection(mockClient);
 
@@ -62,7 +63,7 @@ describe('AlertGateway', () => {
     it('should disconnect unauthenticated client', async () => {
       const mockClient = {
         id: 'client-unauth',
-        disconnect: jest.fn(),
+        disconnect: vi.fn(),
       } as unknown as Socket;
       wsAuthService.authenticateClient.mockRejectedValue(new Error('invalid token'));
 
@@ -76,8 +77,8 @@ describe('AlertGateway', () => {
     it('should remove client from org rooms on disconnect', () => {
       const mockClient = {
         id: 'client-123',
-        join: jest.fn(),
-        leave: jest.fn(),
+        join: vi.fn(),
+        leave: vi.fn(),
         data: {
           user: {
             userId: 'user-123',
@@ -102,7 +103,7 @@ describe('AlertGateway', () => {
     it('should add client to org room', () => {
       const mockClient = {
         id: 'client-123',
-        join: jest.fn(),
+        join: vi.fn(),
         data: {
           user: {
             userId: 'user-123',
@@ -124,7 +125,7 @@ describe('AlertGateway', () => {
     it('should track client in orgRooms map', () => {
       const mockClient = {
         id: 'client-123',
-        join: jest.fn(),
+        join: vi.fn(),
         data: {
           user: {
             userId: 'user-123',
@@ -141,7 +142,7 @@ describe('AlertGateway', () => {
     it('should reject join when user org differs from requested org', () => {
       const mockClient = {
         id: 'client-123',
-        join: jest.fn(),
+        join: vi.fn(),
         data: {
           user: {
             userId: 'user-123',
@@ -165,8 +166,8 @@ describe('AlertGateway', () => {
     it('should remove client from org room', () => {
       const mockClient = {
         id: 'client-123',
-        join: jest.fn(),
-        leave: jest.fn(),
+        join: vi.fn(),
+        leave: vi.fn(),
         data: {
           user: {
             userId: 'user-123',
@@ -223,3 +224,6 @@ describe('AlertGateway', () => {
     });
   });
 });
+
+
+

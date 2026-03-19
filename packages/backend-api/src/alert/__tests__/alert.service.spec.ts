@@ -4,12 +4,13 @@ import { Repository, DataSource } from 'typeorm';
 import { AlertService } from '../alert.service';
 import { Alert, AlertEvent, AlertStatus } from '@videri/shared';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
+import type { Mocked } from 'vitest';
 
 describe('AlertService', () => {
   let service: AlertService;
-  let alertRepo: jest.Mocked<Repository<Alert>>;
-  let alertEventRepo: jest.Mocked<Repository<AlertEvent>>;
-  let dataSource: jest.Mocked<DataSource>;
+  let alertRepo: Mocked<Repository<Alert>>;
+  let alertEventRepo: Mocked<Repository<AlertEvent>>;
+  let dataSource: Mocked<DataSource>;
   let queryRunner: any;
 
   const mockAlert: Partial<Alert> = {
@@ -25,41 +26,41 @@ describe('AlertService', () => {
 
   beforeEach(async () => {
     queryRunner = {
-      connect: jest.fn().mockResolvedValue(undefined),
-      startTransaction: jest.fn().mockResolvedValue(undefined),
-      commitTransaction: jest.fn().mockResolvedValue(undefined),
-      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
-      release: jest.fn().mockResolvedValue(undefined),
+      connect: vi.fn().mockResolvedValue(undefined),
+      startTransaction: vi.fn().mockResolvedValue(undefined),
+      commitTransaction: vi.fn().mockResolvedValue(undefined),
+      rollbackTransaction: vi.fn().mockResolvedValue(undefined),
+      release: vi.fn().mockResolvedValue(undefined),
       manager: {
-        save: jest.fn().mockResolvedValue(mockAlert),
-        findOne: jest.fn().mockResolvedValue(mockAlert),
+        save: vi.fn().mockResolvedValue(mockAlert),
+        findOne: vi.fn().mockResolvedValue(mockAlert),
       },
     };
 
     const mockAlertRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      findOne: jest.fn(),
-      createQueryBuilder: jest.fn(() => ({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([mockAlert]),
+      create: vi.fn(),
+      save: vi.fn(),
+      findOne: vi.fn(),
+      createQueryBuilder: vi.fn(() => ({
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([mockAlert]),
       })),
     };
 
     const mockAlertEventRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      find: jest.fn(),
+      create: vi.fn(),
+      save: vi.fn(),
+      find: vi.fn(),
     };
 
     const mockDataSource = {
-      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+      createQueryRunner: vi.fn().mockReturnValue(queryRunner),
     };
 
     const mockKafka = {
-      sendAlertEvent: jest.fn(),
+      sendAlertEvent: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -145,10 +146,10 @@ describe('AlertService', () => {
 
     it('should filter by status when provided', async () => {
       const queryBuilder = {
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([mockAlert]),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([mockAlert]),
       };
       alertRepo.createQueryBuilder.mockReturnValue(queryBuilder as any);
 
@@ -255,8 +256,8 @@ describe('AlertService', () => {
   describe('deleteAlert', () => {
     it('should delete alert and related events', async () => {
       alertRepo.findOne.mockResolvedValue(mockAlert as Alert);
-      alertEventRepo.delete = jest.fn().mockResolvedValue({ affected: 2 });
-      alertRepo.delete = jest.fn().mockResolvedValue({ affected: 1 });
+      alertEventRepo.delete = vi.fn().mockResolvedValue({ affected: 2 });
+      alertRepo.delete = vi.fn().mockResolvedValue({ affected: 1 });
 
       const result = await service.deleteAlert('alert-123', 'org-123');
 
@@ -275,3 +276,6 @@ describe('AlertService', () => {
     });
   });
 });
+
+
+

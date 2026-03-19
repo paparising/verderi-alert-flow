@@ -3,11 +3,11 @@ import { ConfigService } from '@nestjs/config';
 
 // Create mock BEFORE importing RedisService
 const mockPipeline = {
-  zremrangebyscore: jest.fn().mockReturnThis(),
-  zadd: jest.fn().mockReturnThis(),
-  zcard: jest.fn().mockReturnThis(),
-  pexpire: jest.fn().mockReturnThis(),
-  exec: jest.fn().mockResolvedValue([
+  zremrangebyscore: vi.fn().mockReturnThis(),
+  zadd: vi.fn().mockReturnThis(),
+  zcard: vi.fn().mockReturnThis(),
+  pexpire: vi.fn().mockReturnThis(),
+  exec: vi.fn().mockResolvedValue([
     [null, 0], // zremrangebyscore result
     [null, 1], // zadd result
     [null, 5], // zcard result
@@ -16,11 +16,11 @@ const mockPipeline = {
 };
 
 const mockRedisClient = {
-  on: jest.fn().mockReturnThis(),
-  disconnect: jest.fn(),
-  pipeline: jest.fn(() => mockPipeline),
-  zremrangebyscore: jest.fn().mockResolvedValue(0),
-  zcard: jest.fn().mockResolvedValue(5),
+  on: vi.fn().mockReturnThis(),
+  disconnect: vi.fn(),
+  pipeline: vi.fn(() => mockPipeline),
+  zremrangebyscore: vi.fn().mockResolvedValue(0),
+  zcard: vi.fn().mockResolvedValue(5),
 };
 
 import { RedisService } from '../redis.service';
@@ -29,11 +29,11 @@ describe('RedisService', () => {
   let service: RedisService;
 
   const mockConfigService = {
-    get: jest.fn().mockImplementation((key: string, defaultVal: any) => defaultVal),
+    get: vi.fn().mockImplementation((key: string, defaultVal: any) => defaultVal),
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -93,3 +93,6 @@ describe('RedisService', () => {
     });
   });
 });
+
+
+

@@ -2,20 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { EventNotificationService } from '../notification.service';
 import { AlertGateway } from '../alert.gateway';
+import type { Mocked } from 'vitest';
 
 describe('EventNotificationService', () => {
   let service: EventNotificationService;
-  let alertGateway: jest.Mocked<AlertGateway>;
-  let configService: jest.Mocked<ConfigService>;
+  let alertGateway: Mocked<AlertGateway>;
+  let configService: Mocked<ConfigService>;
 
   const mockAlertGateway = {
-    emitAlertEvent: jest.fn(),
-    emitNewAlert: jest.fn(),
-    emitAlertStatusUpdate: jest.fn(),
+    emitAlertEvent: vi.fn(),
+    emitNewAlert: vi.fn(),
+    emitAlertStatusUpdate: vi.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn().mockImplementation((key: string, defaultVal: string) => defaultVal),
+    get: vi.fn().mockImplementation((key: string, defaultVal: string) => defaultVal),
   };
 
   beforeEach(async () => {
@@ -39,7 +40,7 @@ describe('EventNotificationService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -200,3 +201,6 @@ describe('EventNotificationService', () => {
     });
   });
 });
+
+
+

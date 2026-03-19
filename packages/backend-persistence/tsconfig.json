@@ -9,6 +9,7 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
+    "types": ["node", "vitest/globals"],
     "baseUrl": "./",
     "paths": {
       "@videri/shared": ["../shared/dist"],

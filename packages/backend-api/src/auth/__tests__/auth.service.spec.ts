@@ -3,11 +3,12 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from '../auth.service';
 import { UserService } from '../../user/user.service';
+import type { Mocked } from 'vitest';
 
 describe('AuthService', () => {
   let service: AuthService;
-  let users: jest.Mocked<UserService>;
-  let jwt: jest.Mocked<JwtService>;
+  let users: Mocked<UserService>;
+  let jwt: Mocked<JwtService>;
 
   const mockUser = {
     id: 'user-1',
@@ -19,24 +20,24 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     users = {
-      findByEmailWithPassword: jest.fn(),
-    } as unknown as jest.Mocked<UserService>;
+      findByEmailWithPassword: vi.fn(),
+    } as unknown as Mocked<UserService>;
 
     jwt = {
-      signAsync: jest.fn(),
-    } as unknown as jest.Mocked<JwtService>;
+      signAsync: vi.fn(),
+    } as unknown as Mocked<JwtService>;
 
     service = new AuthService(users, jwt);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('validateUser', () => {
     it('should return user for valid credentials', async () => {
       users.findByEmailWithPassword.mockResolvedValue(mockUser as any);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
 
       const result = await service.validateUser('user@test.com', 'secret');
 
@@ -52,7 +53,7 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException when password is invalid', async () => {
       users.findByEmailWithPassword.mockResolvedValue(mockUser as any);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(service.validateUser('user@test.com', 'wrong')).rejects.toBeInstanceOf(UnauthorizedException);
     });
@@ -61,7 +62,7 @@ describe('AuthService', () => {
   describe('login', () => {
     it('should return access token for valid credentials', async () => {
       users.findByEmailWithPassword.mockResolvedValue(mockUser as any);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
       jwt.signAsync.mockResolvedValue('jwt-token' as never);
 
       const result = await service.login({ email: 'user@test.com', password: 'secret' } as any);
@@ -77,7 +78,7 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException when credentials are invalid', async () => {
       users.findByEmailWithPassword.mockResolvedValue(mockUser as any);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+      vi.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
 
       await expect(service.login({ email: 'user@test.com', password: 'wrong' } as any)).rejects.toBeInstanceOf(
         UnauthorizedException,
@@ -85,3 +86,6 @@ describe('AuthService', () => {
     });
   });
 });
+
+
+

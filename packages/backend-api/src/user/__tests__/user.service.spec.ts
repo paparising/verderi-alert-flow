@@ -5,11 +5,12 @@ import { UserService } from '../user.service';
 import { User, Organization, CreateUserDto, UpdateUserDto } from '@videri/shared';
 import { ForbiddenException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import type { Mocked, MockInstance } from 'vitest';
 
 describe('UserService', () => {
   let service: UserService;
-  let userRepo: jest.Mocked<Repository<User>>;
-  let orgRepo: jest.Mocked<Repository<Organization>>;
+  let userRepo: Mocked<Repository<User>>;
+  let orgRepo: Mocked<Repository<Organization>>;
 
   const mockOrg: Partial<Organization> = {
     id: 'org-123',
@@ -27,7 +28,7 @@ describe('UserService', () => {
   };
 
   beforeEach(() => {
-    (jest.spyOn(bcrypt, 'hash') as jest.SpyInstance).mockResolvedValue('hashed-password');
+    (vi.spyOn(bcrypt, 'hash') as MockInstance).mockResolvedValue('hashed-password');
     Object.assign(mockUser, {
       id: 'user-123',
       name: 'John Doe',
@@ -42,15 +43,15 @@ describe('UserService', () => {
 
   beforeEach(async () => {
     const mockUserRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      find: jest.fn(),
-      findOne: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      save: vi.fn(),
+      find: vi.fn(),
+      findOne: vi.fn(),
+      delete: vi.fn(),
     };
 
     const mockOrgRepo = {
-      findOne: jest.fn(),
+      findOne: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -73,7 +74,7 @@ describe('UserService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -327,3 +328,6 @@ describe('UserService', () => {
     });
   });
 });
+
+
+

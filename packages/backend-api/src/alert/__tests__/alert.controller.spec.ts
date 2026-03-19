@@ -1,20 +1,21 @@
 import { AlertController } from '../alert.controller';
 import { AlertService } from '../alert.service';
 import { AlertStatus, CreateAlertDto, UpdateAlertDto, UpdateAlertStatusDto } from '@videri/shared';
+import type { Mocked } from 'vitest';
 
 describe('AlertController', () => {
   let controller: AlertController;
-  let alertService: jest.Mocked<AlertService>;
+  let alertService: Mocked<AlertService>;
 
   beforeEach(() => {
     alertService = {
-      createAlert: jest.fn(),
-      getAlertsByOrgAndCreator: jest.fn(),
-      updateAlertStatus: jest.fn(),
-      updateAlert: jest.fn(),
-      deleteAlert: jest.fn(),
-      getAlertEventsByAlert: jest.fn(),
-    } as unknown as jest.Mocked<AlertService>;
+      createAlert: vi.fn(),
+      getAlertsByOrgAndCreator: vi.fn(),
+      updateAlertStatus: vi.fn(),
+      updateAlert: vi.fn(),
+      deleteAlert: vi.fn(),
+      getAlertEventsByAlert: vi.fn(),
+    } as unknown as Mocked<AlertService>;
 
     controller = new AlertController(alertService);
   });
@@ -128,3 +129,6 @@ describe('AlertController', () => {
     });
   });
 });
+
+
+

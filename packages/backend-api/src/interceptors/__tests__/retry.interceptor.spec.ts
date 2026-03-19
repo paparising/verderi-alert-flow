@@ -30,15 +30,15 @@ describe('RetryInterceptor', () => {
 
   const createContext = (method: string, path: string) =>
     ({
-      switchToHttp: jest.fn().mockReturnValue({
-        getRequest: jest.fn().mockReturnValue({ method, path }),
+      switchToHttp: vi.fn().mockReturnValue({
+        getRequest: vi.fn().mockReturnValue({ method, path }),
       }),
     } as unknown as ExecutionContext);
 
   describe('Circuit Breaker Check', () => {
     it('should reject request when circuit is OPEN', async () => {
       const mockContext = createContext('GET', '/alerts');
-      const mockHandler = { handle: jest.fn() } as unknown as CallHandler;
+      const mockHandler = { handle: vi.fn() } as unknown as CallHandler;
 
       // Open the circuit
       for (let i = 0; i < 5; i++) {
@@ -52,7 +52,7 @@ describe('RetryInterceptor', () => {
 
     it('should allow request when circuit is CLOSED', async () => {
       const mockContext = createContext('GET', '/alerts');
-      const mockHandler = { handle: jest.fn().mockReturnValue(of({ data: 'success' })) } as unknown as CallHandler;
+      const mockHandler = { handle: vi.fn().mockReturnValue(of({ data: 'success' })) } as unknown as CallHandler;
 
       const value = await firstValueFrom(interceptor.intercept(mockContext, mockHandler));
       expect(value).toEqual({ data: 'success' });
@@ -66,7 +66,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('Timeout');
@@ -87,7 +87,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('Service Unavailable');
@@ -108,7 +108,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount <= 1) {
             const error = new Error('Bad Gateway');
@@ -128,7 +128,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('Gateway Timeout');
@@ -148,7 +148,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('Too Many Requests');
@@ -168,7 +168,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('Request Timeout');
@@ -189,7 +189,7 @@ describe('RetryInterceptor', () => {
       const mockContext = createContext('POST', '/alerts');
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Bad Request');
           (error as any).status = 400;
           return throwError(() => error);
@@ -204,7 +204,7 @@ describe('RetryInterceptor', () => {
       const mockContext = createContext('GET', '/protected');
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Unauthorized');
           (error as any).status = 401;
           return throwError(() => error);
@@ -219,7 +219,7 @@ describe('RetryInterceptor', () => {
       const mockContext = createContext('DELETE', '/alerts/123');
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Forbidden');
           (error as any).status = 403;
           return throwError(() => error);
@@ -234,7 +234,7 @@ describe('RetryInterceptor', () => {
       const mockContext = createContext('GET', '/alerts/nonexistent');
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Not Found');
           (error as any).status = 404;
           return throwError(() => error);
@@ -255,7 +255,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           const currentTime = Date.now();
           if (lastTime) {
@@ -282,14 +282,14 @@ describe('RetryInterceptor', () => {
       const mockContext = createContext('POST', '/alerts');
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Persistent Error');
           (error as any).status = 500;
           return throwError(() => error);
         }),
       } as unknown as CallHandler;
 
-      jest.spyOn(circuitBreakerService, 'recordFailure');
+      vi.spyOn(circuitBreakerService, 'recordFailure');
 
       await expect(firstValueFrom(interceptor.intercept(mockContext, mockHandler))).rejects.toBeDefined();
       expect(circuitBreakerService.recordFailure).toHaveBeenCalledWith('POST:/alerts');
@@ -299,10 +299,10 @@ describe('RetryInterceptor', () => {
       const mockContext = createContext('GET', '/users');
 
       const mockHandler = {
-        handle: jest.fn().mockReturnValue(of({ data: [] })),
+        handle: vi.fn().mockReturnValue(of({ data: [] })),
       } as unknown as CallHandler;
 
-      jest.spyOn(circuitBreakerService, 'recordSuccess');
+      vi.spyOn(circuitBreakerService, 'recordSuccess');
 
       await firstValueFrom(interceptor.intercept(mockContext, mockHandler));
       expect(circuitBreakerService.recordSuccess).toHaveBeenCalledWith('GET:/users');
@@ -315,7 +315,7 @@ describe('RetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           const error = new Error('Always fails');
           (error as any).status = 503;
@@ -328,3 +328,6 @@ describe('RetryInterceptor', () => {
     }, 60000);
   });
 });
+
+
+

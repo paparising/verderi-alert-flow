@@ -5,14 +5,15 @@ import { ConfigService } from '@nestjs/config';
 import { AlertEventProcessorService } from '../alert-event-processor.service';
 import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@videri/shared';
 import { KafkaProducerService } from '../../kafka/kafka-producer.service';
+import type { Mocked } from 'vitest';
 
 describe('AlertEventProcessorService', () => {
   let service: AlertEventProcessorService;
-  let alertEventRepo: jest.Mocked<Repository<AlertEvent>>;
-  let processedEventRepo: jest.Mocked<Repository<ProcessedEvent>>;
-  let kafkaProducer: jest.Mocked<KafkaProducerService>;
-  let configService: jest.Mocked<ConfigService>;
-  let dataSource: jest.Mocked<DataSource>;
+  let alertEventRepo: Mocked<Repository<AlertEvent>>;
+  let processedEventRepo: Mocked<Repository<ProcessedEvent>>;
+  let kafkaProducer: Mocked<KafkaProducerService>;
+  let configService: Mocked<ConfigService>;
+  let dataSource: Mocked<DataSource>;
   let queryRunner: any;
 
   const mockAlertEvent: Partial<AlertEvent> = {
@@ -31,38 +32,38 @@ describe('AlertEventProcessorService', () => {
 
   beforeEach(async () => {
     queryRunner = {
-      connect: jest.fn().mockResolvedValue(undefined),
-      startTransaction: jest.fn().mockResolvedValue(undefined),
-      commitTransaction: jest.fn().mockResolvedValue(undefined),
-      rollbackTransaction: jest.fn().mockResolvedValue(undefined),
-      release: jest.fn().mockResolvedValue(undefined),
+      connect: vi.fn().mockResolvedValue(undefined),
+      startTransaction: vi.fn().mockResolvedValue(undefined),
+      commitTransaction: vi.fn().mockResolvedValue(undefined),
+      rollbackTransaction: vi.fn().mockResolvedValue(undefined),
+      release: vi.fn().mockResolvedValue(undefined),
       manager: {
-        create: jest.fn(),
-        save: jest.fn(),
-        update: jest.fn(),
+        create: vi.fn(),
+        save: vi.fn(),
+        update: vi.fn(),
       },
     };
 
     const mockAlertEventRepo = {
-      find: jest.fn(),
-      count: jest.fn(),
+      find: vi.fn(),
+      count: vi.fn(),
     };
 
     const mockProcessedEventRepo = {
-      findOne: jest.fn(),
-      count: jest.fn(),
+      findOne: vi.fn(),
+      count: vi.fn(),
     };
 
     const mockKafka = {
-      sendAlertEvent: jest.fn(),
+      sendAlertEvent: vi.fn(),
     };
 
     const mockConfig = {
-      get: jest.fn().mockReturnValue(1000), // Default 1000ms
+      get: vi.fn().mockReturnValue(1000), // Default 1000ms
     };
 
     const mockDataSource = {
-      createQueryRunner: jest.fn().mockReturnValue(queryRunner),
+      createQueryRunner: vi.fn().mockReturnValue(queryRunner),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -85,7 +86,7 @@ describe('AlertEventProcessorService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -283,7 +284,7 @@ describe('AlertEventProcessorService', () => {
 
   describe('module lifecycle', () => {
     it('should initialize and destroy properly', () => {
-      const destroySpy = jest.spyOn(service, 'onModuleDestroy');
+      const destroySpy = vi.spyOn(service, 'onModuleDestroy');
 
       service.onModuleInit();
       service.onModuleDestroy();
@@ -295,7 +296,7 @@ describe('AlertEventProcessorService', () => {
 
   describe('onModuleDestroy', () => {
     it('should clear processing interval on destroy', () => {
-      const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
       service['processingInterval'] = setInterval(() => {}, 1000);
 
       service.onModuleDestroy();
@@ -305,3 +306,6 @@ describe('AlertEventProcessorService', () => {
     });
   });
 });
+
+
+

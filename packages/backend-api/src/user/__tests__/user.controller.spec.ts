@@ -2,10 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from '../user.controller';
 import { UserService } from '../user.service';
 import { CreateUserDto, UpdateUserDto } from '@videri/shared';
+import type { Mocked } from 'vitest';
 
 describe('UserController', () => {
   let controller: UserController;
-  let service: jest.Mocked<UserService>;
+  let service: Mocked<UserService>;
 
   const mockOrg = {
     id: 'org-123',
@@ -24,11 +25,11 @@ describe('UserController', () => {
 
   beforeEach(async () => {
     const mockService = {
-      createForOrg: jest.fn(),
-      findAllByOrg: jest.fn(),
-      findOneByOrg: jest.fn(),
-      updateForOrg: jest.fn(),
-      deleteForOrg: jest.fn(),
+      createForOrg: vi.fn(),
+      findAllByOrg: vi.fn(),
+      findOneByOrg: vi.fn(),
+      updateForOrg: vi.fn(),
+      deleteForOrg: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -42,7 +43,7 @@ describe('UserController', () => {
     }).compile();
 
     controller = module.get<UserController>(UserController);
-    service = module.get(UserService) as jest.Mocked<UserService>;
+    service = module.get(UserService) as Mocked<UserService>;
   });
 
   it('should be defined', () => {
@@ -199,3 +200,6 @@ describe('UserController', () => {
     });
   });
 });
+
+
+

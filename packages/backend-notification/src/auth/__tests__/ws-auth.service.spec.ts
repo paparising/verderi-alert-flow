@@ -3,18 +3,19 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Socket } from 'socket.io';
 import { WsAuthService } from '../ws-auth.service';
+import type { Mocked } from 'vitest';
 
 describe('WsAuthService', () => {
   let service: WsAuthService;
-  let jwtService: jest.Mocked<JwtService>;
+  let jwtService: Mocked<JwtService>;
 
   beforeEach(() => {
     jwtService = {
-      verifyAsync: jest.fn(),
-    } as unknown as jest.Mocked<JwtService>;
+      verifyAsync: vi.fn(),
+    } as unknown as Mocked<JwtService>;
 
     const configService = {
-      get: jest.fn((_: string, fallback: string) => fallback),
+      get: vi.fn((_: string, fallback: string) => fallback),
     } as unknown as ConfigService;
 
     service = new WsAuthService(jwtService, configService);
@@ -89,3 +90,6 @@ describe('WsAuthService', () => {
     await expect(service.authenticateClient(mockClient)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });
+
+
+

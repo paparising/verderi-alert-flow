@@ -1,14 +1,15 @@
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
+import type { Mocked } from 'vitest';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let authService: jest.Mocked<AuthService>;
+  let authService: Mocked<AuthService>;
 
   beforeEach(() => {
     authService = {
-      login: jest.fn(),
-    } as unknown as jest.Mocked<AuthService>;
+      login: vi.fn(),
+    } as unknown as Mocked<AuthService>;
 
     controller = new AuthController(authService);
   });
@@ -28,3 +29,6 @@ describe('AuthController', () => {
     expect(result).toEqual(expected);
   });
 });
+
+
+

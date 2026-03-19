@@ -7,11 +7,11 @@ describe('CircuitBreakerService', () => {
   beforeEach(() => {
     service = new CircuitBreakerService();
     currentTime = 0;
-    jest.spyOn(service, 'getCurrentTime' as any).mockImplementation(() => currentTime);
+    vi.spyOn(service, 'getCurrentTime' as any).mockImplementation(() => currentTime);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -357,3 +357,6 @@ describe('CircuitBreakerService', () => {
     });
   });
 });
+
+
+

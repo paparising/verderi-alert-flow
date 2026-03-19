@@ -3,14 +3,15 @@ import { ExecutionContext, CallHandler, ServiceUnavailableException } from '@nes
 import { of, throwError, firstValueFrom } from 'rxjs';
 import { AlertRetryInterceptor } from '../alert-retry.interceptor';
 import { CircuitBreakerService } from '../circuit-breaker.service';
+import type { MockInstance } from 'vitest';
 
 describe('AlertRetryInterceptor', () => {
   let interceptor: AlertRetryInterceptor;
   let circuitBreakerService: CircuitBreakerService;
-  let mathRandomSpy: jest.SpyInstance;
+  let mathRandomSpy: MockInstance;
 
   beforeEach(async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     
     circuitBreakerService = new CircuitBreakerService();
 
@@ -26,12 +27,12 @@ describe('AlertRetryInterceptor', () => {
 
     interceptor = module.get<AlertRetryInterceptor>(AlertRetryInterceptor);
 
-    mathRandomSpy = jest.spyOn(Math, 'random').mockReturnValue(0);
+    mathRandomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
   });
 
   afterEach(() => {
     mathRandomSpy.mockRestore();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('should be defined', () => {
@@ -41,8 +42,8 @@ describe('AlertRetryInterceptor', () => {
   describe('Specialized Alert Retry Logic', () => {
     it('should retry with 5 max attempts for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -51,7 +52,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 4) {
             const error = new Error('Database connection timeout');
@@ -73,7 +74,7 @@ describe('AlertRetryInterceptor', () => {
       
       // Advance timers through all retry delays
       for (let i = 0; i < 10; i++) {
-        await jest.advanceTimersByTimeAsync(2000);
+        await vi.advanceTimersByTimeAsync(2000);
         if (resolvedValue || rejectedError) break;
       }
       
@@ -84,8 +85,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should handle connection refused errors for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -94,7 +95,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('ECONNREFUSED');
@@ -114,7 +115,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeUndefined();
       expect(attemptCount).toBe(2);
@@ -122,8 +123,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should handle connection reset errors for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'PATCH',
             path: '/alerts/123/status',
           }),
@@ -132,7 +133,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('ECONNRESET');
@@ -152,7 +153,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeUndefined();
       expect(attemptCount).toBe(2);
@@ -160,8 +161,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should handle timeout errors for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'GET',
             path: '/alerts',
           }),
@@ -170,7 +171,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('TimeoutError');
@@ -191,7 +192,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeUndefined();
       expect(attemptCount).toBe(2);
@@ -199,8 +200,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should handle 5xx errors for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'DELETE',
             path: '/alerts/123',
           }),
@@ -209,7 +210,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('Internal Server Error');
@@ -230,7 +231,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeUndefined();
       expect(attemptCount).toBe(2);
@@ -240,8 +241,8 @@ describe('AlertRetryInterceptor', () => {
   describe('Alert-Specific Non-Retryable Errors', () => {
     it('should not retry on 400 for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -249,7 +250,7 @@ describe('AlertRetryInterceptor', () => {
       } as unknown as ExecutionContext;
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Invalid alert context');
           (error as any).status = 400;
           return throwError(() => error);
@@ -265,7 +266,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeDefined();
       expect(mockHandler.handle).toHaveBeenCalledTimes(1);
@@ -273,8 +274,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should not retry on 401 for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'PATCH',
             path: '/alerts/123/status',
           }),
@@ -282,7 +283,7 @@ describe('AlertRetryInterceptor', () => {
       } as unknown as ExecutionContext;
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Unauthorized');
           (error as any).status = 401;
           return throwError(() => error);
@@ -298,7 +299,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeDefined();
       expect(mockHandler.handle).toHaveBeenCalledTimes(1);
@@ -306,8 +307,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should not retry on 403 for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'DELETE',
             path: '/alerts/456',
           }),
@@ -315,7 +316,7 @@ describe('AlertRetryInterceptor', () => {
       } as unknown as ExecutionContext;
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Forbidden');
           (error as any).status = 403;
           return throwError(() => error);
@@ -331,7 +332,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeDefined();
       expect(mockHandler.handle).toHaveBeenCalledTimes(1);
@@ -339,8 +340,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should not retry on 404 for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'GET',
             path: '/alerts/nonexistent',
           }),
@@ -348,7 +349,7 @@ describe('AlertRetryInterceptor', () => {
       } as unknown as ExecutionContext;
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Alert not found');
           (error as any).status = 404;
           return throwError(() => error);
@@ -364,7 +365,7 @@ describe('AlertRetryInterceptor', () => {
         error: (err) => { rejectedError = err; },
       });
       
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       expect(rejectedError).toBeDefined();
       expect(mockHandler.handle).toHaveBeenCalledTimes(1);
@@ -374,8 +375,8 @@ describe('AlertRetryInterceptor', () => {
   describe('Circuit Breaker Integration', () => {
     it('should reject when circuit breaker is open for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -383,7 +384,7 @@ describe('AlertRetryInterceptor', () => {
       } as unknown as ExecutionContext;
 
       const mockHandler = {
-        handle: jest.fn(),
+        handle: vi.fn(),
       } as unknown as CallHandler;
 
       // Open the circuit for alerts
@@ -398,8 +399,8 @@ describe('AlertRetryInterceptor', () => {
 
     it('should record failure in circuit breaker for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -407,14 +408,14 @@ describe('AlertRetryInterceptor', () => {
       } as unknown as ExecutionContext;
 
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           const error = new Error('Persistent failure');
           (error as any).status = 500;
           return throwError(() => error);
         }),
       } as unknown as CallHandler;
 
-      jest.spyOn(circuitBreakerService, 'recordFailure');
+      vi.spyOn(circuitBreakerService, 'recordFailure');
 
       const result = interceptor.intercept(mockContext, mockHandler);
 
@@ -428,7 +429,7 @@ describe('AlertRetryInterceptor', () => {
       
       // Advance timers to process all retries
       for (let i = 0; i < 10 && !done; i++) {
-        await jest.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(5000);
       }
       
       expect(rejectedError).toBeDefined();
@@ -439,8 +440,8 @@ describe('AlertRetryInterceptor', () => {
   describe('Max Retry Attempts for Alerts', () => {
     it('should retry up to 5 times for alerts', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -449,7 +450,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           const error = new Error('Always fails');
           (error as any).status = 503;
@@ -469,7 +470,7 @@ describe('AlertRetryInterceptor', () => {
       
       // Advance timers to process all retries
       for (let i = 0; i < 10 && !done; i++) {
-        await jest.advanceTimersByTimeAsync(5000);
+        await vi.advanceTimersByTimeAsync(5000);
       }
       
       expect(rejectedError).toBeDefined();
@@ -481,8 +482,8 @@ describe('AlertRetryInterceptor', () => {
   describe('Faster Retry Delays for Alerts', () => {
     it('should use shorter delays for alert retries', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'POST',
             path: '/alerts',
           }),
@@ -491,7 +492,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 3) {
             const error = new Error('Fail');
@@ -505,7 +506,7 @@ describe('AlertRetryInterceptor', () => {
       const result = interceptor.intercept(mockContext, mockHandler);
 
       const promise = firstValueFrom(result);
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       const value = await promise;
       expect(value).toEqual({ id: 'alert-123' });
@@ -516,8 +517,8 @@ describe('AlertRetryInterceptor', () => {
   describe('Database Connection Error Handling', () => {
     it('should retry on common database errors', async () => {
       const mockContext = {
-        switchToHttp: jest.fn().mockReturnValue({
-          getRequest: jest.fn().mockReturnValue({
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue({
             method: 'GET',
             path: '/alerts',
           }),
@@ -526,7 +527,7 @@ describe('AlertRetryInterceptor', () => {
 
       let attemptCount = 0;
       const mockHandler = {
-        handle: jest.fn().mockImplementation(() => {
+        handle: vi.fn().mockImplementation(() => {
           attemptCount++;
           if (attemptCount < 2) {
             const error = new Error('connection timeout exceeded');
@@ -539,10 +540,13 @@ describe('AlertRetryInterceptor', () => {
       const result = interceptor.intercept(mockContext, mockHandler);
 
       const promise = firstValueFrom(result);
-      await jest.runAllTimersAsync();
+      await vi.runAllTimersAsync();
       
       await promise;
       expect(attemptCount).toBe(2);
     });
   });
 });
+
+
+

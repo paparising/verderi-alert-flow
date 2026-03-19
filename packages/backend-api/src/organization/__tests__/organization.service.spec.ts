@@ -3,10 +3,11 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrganizationService } from '../organization.service';
 import { Organization } from '@videri/shared';
+import type { Mocked } from 'vitest';
 
 describe('OrganizationService', () => {
   let service: OrganizationService;
-  let repo: jest.Mocked<Repository<Organization>>;
+  let repo: Mocked<Repository<Organization>>;
 
   const mockOrg: Partial<Organization> = {
     id: 'org-123',
@@ -17,10 +18,10 @@ describe('OrganizationService', () => {
 
   beforeEach(async () => {
     const mockRepo = {
-      create: jest.fn(),
-      save: jest.fn(),
-      find: jest.fn(),
-      findOne: jest.fn(),
+      create: vi.fn(),
+      save: vi.fn(),
+      find: vi.fn(),
+      findOne: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -89,3 +90,6 @@ describe('OrganizationService', () => {
     });
   });
 });
+
+
+

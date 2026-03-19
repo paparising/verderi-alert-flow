@@ -7,7 +7,7 @@ describe('JwtStrategy', () => {
 
   beforeEach(() => {
     const config = {
-      get: jest.fn((key: string, defaultValue: string) => defaultValue),
+      get: vi.fn((key: string, defaultValue: string) => defaultValue),
     } as unknown as ConfigService;
 
     strategy = new JwtStrategy(config);
@@ -35,3 +35,6 @@ describe('JwtStrategy', () => {
     expect(() => strategy.validate({ sub: '', orgId: '' })).toThrow(UnauthorizedException);
   });
 });
+
+
+

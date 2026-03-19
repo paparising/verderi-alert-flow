@@ -4,26 +4,27 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventPersistenceService } from '../persistence.service';
 import { AlertEvent, ProcessedEvent, ProcessingStatus } from '@videri/shared';
+import type { Mocked } from 'vitest';
 
 describe('EventPersistenceService', () => {
   let service: EventPersistenceService;
-  let alertEventRepo: jest.Mocked<Repository<AlertEvent>>;
-  let processedEventRepo: jest.Mocked<Repository<ProcessedEvent>>;
-  let configService: jest.Mocked<ConfigService>;
+  let alertEventRepo: Mocked<Repository<AlertEvent>>;
+  let processedEventRepo: Mocked<Repository<ProcessedEvent>>;
+  let configService: Mocked<ConfigService>;
 
   const mockAlertEventRepo = {
-    create: jest.fn(),
-    save: jest.fn(),
+    create: vi.fn(),
+    save: vi.fn(),
   };
 
   const mockProcessedEventRepo = {
-    create: jest.fn(),
-    save: jest.fn(),
-    findOne: jest.fn(),
+    create: vi.fn(),
+    save: vi.fn(),
+    findOne: vi.fn(),
   };
 
   const mockConfigService = {
-    get: jest.fn().mockImplementation((key: string, defaultVal: string) => defaultVal),
+    get: vi.fn().mockImplementation((key: string, defaultVal: string) => defaultVal),
   };
 
   beforeEach(async () => {
@@ -52,7 +53,7 @@ describe('EventPersistenceService', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -250,3 +251,6 @@ describe('EventPersistenceService', () => {
     });
   });
 });
+
+
+

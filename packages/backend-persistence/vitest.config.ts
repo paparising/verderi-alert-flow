@@ -9,7 +9,9 @@ export default defineConfig({
     setupFiles: ['./dist/test/setup-vitest.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary', 'lcov'],
+      include: ['dist/**/*.js'],
+      exclude: ['dist/**/__tests__/**', 'dist/test/**'],
     },
   },
 });
